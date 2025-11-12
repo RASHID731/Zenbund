@@ -1,0 +1,125 @@
+{
+  "type": "Data Tables",
+  "User": {
+    "id": "number",
+    "email": "string",
+    "passwordHash": "string",
+    "name": "string",
+    "bio": "string?",
+    "profilePicture": "string?",
+    "university": "string",
+    "major": "string",
+    "year": "string?",
+    "instagramLink": "string?",
+    "isVerified": "boolean",
+    "createdAt": "date",
+    "updatedAt": "date",
+    "relationships": {
+      "threads": "Thread[]",
+      "comments": "Comment[]",
+      "chats": "Chat[]",
+      "offers": "Offer[]",
+      "wishlist": "Wishlist[]"
+    }
+  },
+  "Offer": {
+    "id": "number",
+    "userId": "number",
+    "imageUrls": "string[]",
+    "title": "string",
+    "price": "number",
+    "categoryId": "number",
+    "pickupLocation": "string",
+    "description": "string",
+    "status": "string[available, sold]",
+    "wishlistCount": "number",
+    "createdAt": "date",
+    "updatedAt": "date",
+    "relationships": {
+      "user": "User",
+      "category": "Category"
+    }
+  },
+  "Category": {
+    "id": "number",
+    "name": "string",
+    "emoji": "string",
+    "relationships": {
+      "offers": "Offer[]"
+    }
+  },
+  "ThreadMember": {
+    "id": "number",
+    "userId": "number",
+    "threadId": "number",
+    "postAnonymously": "boolean",
+    "joinedAt": "date",
+    "relationships": {
+      "user": "User",
+      "thread": "Thread"
+    }
+  },
+  "Thread": {
+    "id": "number",
+    "emoji": "string",
+    "name": "string",
+    "description": "string",
+    "memberCount": "number",
+    "createdAt": "date",
+    "updatedAt": "date",
+    "relationships": {
+      "members": "User[]",
+      "comments": "Comment[]"
+    }
+  },
+  "Comment": {
+    "id": "number",
+    "threadId": "number",
+    "userId": "number",
+    "parentCommentId": "number?",
+    "text": "string",
+    "isAnonymous": "boolean",
+    "likes": "number",
+    "replyCount": "number",
+    "createdAt": "date",
+    "updatedAt": "date",
+    "relationships": {
+      "thread": "Thread",
+      "parent": "Comment?",
+      "replies": "Comment[]"
+    }
+  },
+  "Chat": {
+    "id": "number",
+    "user1Id": "number",
+    "user2Id": "number",
+    "createdAt": "date",
+    "updatedAt": "date",
+    "relationships": {
+      "user1": "User",
+      "user2": "User",
+      "messages": "Message[]"
+    }
+  },
+  "Message": {
+    "id": "number",
+    "chatId": "number",
+    "senderId": "number",
+    "text": "string",
+    "createdAt": "date",
+    "relationships": {
+      "sender": "User",
+      "chat": "Chat"
+    }
+  },
+  "Wishlist": {
+    "id": "number",
+    "userId": "number",
+    "offerId": "number",
+    "addedAt": "date",
+    "relationships": {
+      "user": "User",
+      "offer": "Offer"
+    }
+  }
+}
