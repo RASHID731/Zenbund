@@ -1,7 +1,7 @@
 import { Text, YStack, XStack, ScrollView } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
-import { Image } from 'react-native';
+import { Image, FlatList } from 'react-native';
 import { Home, Shirt, BookOpen, Gamepad2, SlidersHorizontal, ChevronDown } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Navbar } from '@/components/navbar';
@@ -292,81 +292,81 @@ export default function HomeScreen() {
             </XStack>
             
             {/* Offers Grid */}
-            <YStack gap={16}>
-              {/* Render listings in rows of 2 */}
-              {listings.length === 0 ? (
+            <FlatList
+              data={listings}
+              numColumns={2}
+              scrollEnabled={false}
+              columnWrapperStyle={{ gap: 16 }}
+              contentContainerStyle={{ gap: 16 }}
+              keyExtractor={(item) => item.id.toString()}
+              ListEmptyComponent={
                 <YStack padding={40} alignItems="center">
                   <Text fontSize={16} color={colors.textSecondary} fontFamily="$body">
                     No listings available
                   </Text>
                 </YStack>
-              ) : (
-                Array.from({ length: Math.ceil(listings.length / 2) }, (_, i) => i * 2).map((startIndex) => (
-                <XStack key={startIndex} gap={16}>
-                  {listings.slice(startIndex, startIndex + 2).map((listing) => (
-                    <YStack
-                      key={listing.id}
-                      flex={1}
-                      backgroundColor={colors.card}
-                      borderRadius={20}
-                      borderWidth={1}
-                      borderColor={colors.border}
-                      overflow="hidden"
-                      pressStyle={{
-                        opacity: 0.9,
-                        scale: 0.97,
-                      }}
-                      cursor="pointer"
-                      onPress={() => openListingDetail(listing)}
+              }
+              renderItem={({ item: listing }) => (
+                <YStack
+                  flex={1}
+                  maxWidth="48%"
+                  backgroundColor={colors.card}
+                  borderRadius={20}
+                  borderWidth={1}
+                  borderColor={colors.border}
+                  overflow="hidden"
+                  pressStyle={{
+                    opacity: 0.9,
+                    scale: 0.97,
+                  }}
+                  cursor="pointer"
+                  onPress={() => openListingDetail(listing)}
+                >
+                  <YStack
+                    height={160}
+                    backgroundColor={colors.backgroundSecondary}
+                    borderBottomColor={colors.border}
+                    borderBottomWidth={1}
+                    justifyContent="center"
+                    alignItems="center"
+                    overflow="hidden"
+                  >
+                    {listing.imageUrls && listing.imageUrls.length > 0 ? (
+                      <Image
+                        source={{ uri: listing.imageUrls[0] }}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                        }}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text fontSize={48}>{listing.emoji}</Text>
+                    )}
+                  </YStack>
+                  <YStack padding={12} gap={6}>
+                    <Text
+                      fontSize={15}
+                      fontWeight="600"
+                      color={colors.text}
+                      fontFamily="$body"
+                      numberOfLines={1}
                     >
-                      <YStack
-                        height={160}
-                        backgroundColor={colors.backgroundSecondary}
-                        borderBottomColor={colors.border}
-                        borderBottomWidth={1}
-                        justifyContent="center"
-                        alignItems="center"
-                        overflow="hidden"
-                      >
-                        {listing.imageUrls && listing.imageUrls.length > 0 ? (
-                          <Image
-                            source={{ uri: listing.imageUrls[0] }}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                            }}
-                            resizeMode="cover"
-                          />
-                        ) : (
-                          <Text fontSize={48}>{listing.emoji}</Text>
-                        )}
-                      </YStack>
-                      <YStack padding={12} gap={6}>
-                        <Text
-                          fontSize={15}
-                          fontWeight="600"
-                          color={colors.text}
-                          fontFamily="$body"
-                          numberOfLines={1}
-                        >
-                          {listing.name}
-                        </Text>
-                        <Text
-                          fontSize={17}
-                          fontWeight="700"
-                          color={colors.primary}
-                          fontFamily="$body"
-                          marginTop={2}
-                        >
-                          {listing.price}
-                        </Text>
-                      </YStack>
-                    </YStack>
-                  ))}
-                </XStack>
-              ))
+                      {listing.name}
+                    </Text>
+                    <Text
+                      fontSize={17}
+                      fontWeight="700"
+                      color={colors.primary}
+                      fontFamily="$body"
+                      marginTop={2}
+                    >
+                      {listing.price}
+                    </Text>
+                  </YStack>
+                </YStack>
               )}
-            </YStack>
+            />
           </YStack>
         </ScrollView>
       </YStack>
