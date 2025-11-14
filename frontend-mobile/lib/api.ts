@@ -1,7 +1,11 @@
 // API client and utilities
 import axios, { AxiosInstance, AxiosError } from 'axios';
+import * as SecureStore from 'expo-secure-store';
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080/api';
+
+// Key for storing JWT token in SecureStore
+const JWT_TOKEN_KEY = 'jwt_token';
 
 export interface ApiResponse<T> {
   data: T;
@@ -20,6 +24,74 @@ export class ApiClient {
       },
       timeout: 30000, // 30 seconds
     });
+
+    // Setup interceptors for JWT authentication
+    this.setupInterceptors();
+  }
+
+  /**
+   * Setup request and response interceptors for JWT authentication.
+   * Request interceptor: Adds JWT token to Authorization header
+   * Response interceptor: Handles 401 errors (token expired)
+   */
+  private setupInterceptors() {
+    // Request interceptor - Add JWT token to every request
+    this.axiosInstance.interceptors.request.use(
+      async (config) => {
+        // Get JWT token from secure storage
+        const token = await SecureStore.getItemAsync(JWT_TOKEN_KEY);
+
+        if (token) {
+          // Add Authorization header: "Bearer <token>"
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+
+        return config;
+      },
+      (error) => {
+        return Promise.reject(error);
+      }
+    );
+
+    // Response interceptor - Handle token expiration
+    this.axiosInstance.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        // If 401 Unauthorized, token is likely expired or invalid
+        if (error.response?.status === 401) {
+          // Clear the invalid token
+          await SecureStore.deleteItemAsync(JWT_TOKEN_KEY);
+
+          // You can emit an event here to redirect to login
+          // or handle it in your AuthContext
+        }
+
+        return Promise.reject(error);
+      }
+    );
+  }
+
+  /**
+   * Set JWT token in secure storage.
+   * Called after successful login/registration.
+   */
+  async setToken(token: string): Promise<void> {
+    await SecureStore.setItemAsync(JWT_TOKEN_KEY, token);
+  }
+
+  /**
+   * Get JWT token from secure storage.
+   */
+  async getToken(): Promise<string | null> {
+    return await SecureStore.getItemAsync(JWT_TOKEN_KEY);
+  }
+
+  /**
+   * Clear JWT token from secure storage.
+   * Called on logout.
+   */
+  async clearToken(): Promise<void> {
+    await SecureStore.deleteItemAsync(JWT_TOKEN_KEY);
   }
 
   async get<T>(endpoint: string): Promise<ApiResponse<T>> {

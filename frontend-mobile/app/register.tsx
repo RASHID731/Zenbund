@@ -3,27 +3,81 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { User, Mail, Lock } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { KeyboardAvoidingView, Platform } from 'react-native';
+import { KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuth } from '@/contexts/AuthContext';
+import { validateRegisterForm } from '@/lib/validation';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
+  const { register } = useAuth();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [university, setUniversity] = useState('');
+  const [major, setMajor] = useState('');
+  const [year, setYear] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  function handleRegister() {
-    // TODO: Add real registration logic here
-    // For now, just navigate to the main app
-    router.replace('/(tabs)');
+  /**
+   * Handle registration button press.
+   * Validates form, calls API, navigates to app on success.
+   */
+  async function handleRegister() {
+    // Clear previous error
+    setErrorMessage('');
+
+    // Validate form inputs
+    const validation = validateRegisterForm({
+      name,
+      email,
+      password,
+      confirmPassword,
+      university,
+      major,
+    });
+
+    if (!validation.isValid) {
+      setErrorMessage(validation.error || 'Please check your inputs');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Call register function from AuthContext
+      const result = await register({
+        name,
+        email,
+        password,
+        university,
+        major,
+        year: year.trim() || undefined,
+      });
+
+      if (result.success) {
+        // Registration successful! Navigate to main app
+        router.replace('/(tabs)');
+      } else {
+        // Registration failed - show error message
+        setErrorMessage(result.message || 'Registration failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      setErrorMessage('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function handleSkip() {
+    // Dev only - bypass auth for testing
     router.replace('/(tabs)');
   }
 
@@ -185,23 +239,141 @@ export default function RegisterScreen() {
                   />
                 </XStack>
               </YStack>
+
+              {/* University Input */}
+              <YStack gap={8}>
+                <Text fontSize={15} fontWeight="600" color={colors.text} fontFamily="$body">
+                  University
+                </Text>
+                <XStack
+                  backgroundColor={colors.backgroundSecondary}
+                  borderRadius={20}
+                  paddingHorizontal={16}
+                  alignItems="center"
+                  borderColor={colors.border}
+                  borderWidth={1}
+                  gap={8}
+                >
+                  <User size={20} color={colors.icon} strokeWidth={2.5} />
+                  <Input
+                    flex={1}
+                    placeholder="University of Rostock"
+                    placeholderTextColor={colors.textTertiary}
+                    value={university}
+                    onChangeText={setUniversity}
+                    borderWidth={0}
+                    backgroundColor="transparent"
+                    paddingHorizontal={0}
+                    paddingVertical={0}
+                    fontSize={16}
+                    fontFamily="$body"
+                    color={colors.text}
+                    autoCapitalize="words"
+                  />
+                </XStack>
+              </YStack>
+
+              {/* Major Input */}
+              <YStack gap={8}>
+                <Text fontSize={15} fontWeight="600" color={colors.text} fontFamily="$body">
+                  Major
+                </Text>
+                <XStack
+                  backgroundColor={colors.backgroundSecondary}
+                  borderRadius={20}
+                  paddingHorizontal={16}
+                  alignItems="center"
+                  borderColor={colors.border}
+                  borderWidth={1}
+                  gap={8}
+                >
+                  <User size={20} color={colors.icon} strokeWidth={2.5} />
+                  <Input
+                    flex={1}
+                    placeholder="Computer Science"
+                    placeholderTextColor={colors.textTertiary}
+                    value={major}
+                    onChangeText={setMajor}
+                    borderWidth={0}
+                    backgroundColor="transparent"
+                    paddingHorizontal={0}
+                    paddingVertical={0}
+                    fontSize={16}
+                    fontFamily="$body"
+                    color={colors.text}
+                    autoCapitalize="words"
+                  />
+                </XStack>
+              </YStack>
+
+              {/* Year Input (Optional) */}
+              <YStack gap={8}>
+                <Text fontSize={15} fontWeight="600" color={colors.text} fontFamily="$body">
+                  Year (Optional)
+                </Text>
+                <XStack
+                  backgroundColor={colors.backgroundSecondary}
+                  borderRadius={20}
+                  paddingHorizontal={16}
+                  alignItems="center"
+                  borderColor={colors.border}
+                  borderWidth={1}
+                  gap={8}
+                >
+                  <User size={20} color={colors.icon} strokeWidth={2.5} />
+                  <Input
+                    flex={1}
+                    placeholder="3rd Year"
+                    placeholderTextColor={colors.textTertiary}
+                    value={year}
+                    onChangeText={setYear}
+                    borderWidth={0}
+                    backgroundColor="transparent"
+                    paddingHorizontal={0}
+                    paddingVertical={0}
+                    fontSize={16}
+                    fontFamily="$body"
+                    color={colors.text}
+                  />
+                </XStack>
+              </YStack>
             </YStack>
+
+            {/* Error Message */}
+            {errorMessage ? (
+              <XStack
+                backgroundColor="#fee2e2"
+                borderRadius={12}
+                paddingHorizontal={16}
+                paddingVertical={12}
+                borderWidth={1}
+                borderColor="#ef4444"
+              >
+                <Text fontSize={14} color="#dc2626" fontFamily="$body">
+                  {errorMessage}
+                </Text>
+              </XStack>
+            ) : null}
 
             {/* Register Button */}
             <YStack gap={12}>
               <XStack
-                backgroundColor={colors.primary}
+                backgroundColor={isLoading ? colors.textTertiary : colors.primary}
                 borderRadius={12}
                 paddingVertical={16}
                 justifyContent="center"
                 alignItems="center"
-                pressStyle={{ opacity: 0.8, scale: 0.98 }}
-                cursor="pointer"
-                onPress={handleRegister}
+                pressStyle={isLoading ? {} : { opacity: 0.8, scale: 0.98 }}
+                cursor={isLoading ? 'not-allowed' : 'pointer'}
+                onPress={isLoading ? undefined : handleRegister}
               >
-                <Text fontSize={17} fontWeight="700" color="white" fontFamily="$body">
-                  Create Account
-                </Text>
+                {isLoading ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text fontSize={17} fontWeight="700" color="white" fontFamily="$body">
+                    Create Account
+                  </Text>
+                )}
               </XStack>
 
               {/* Skip Button - Dev Only */}

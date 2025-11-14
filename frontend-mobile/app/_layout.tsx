@@ -10,6 +10,7 @@ import { useEffect } from 'react';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import config from '../tamagui.config';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 // Prevent splash screen from hiding automatically
 SplashScreen.preventAutoHideAsync();
@@ -38,25 +39,27 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <TamaguiProvider config={config} defaultTheme={colorScheme || 'light'}>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="login" options={{ headerShown: false }} />
-            <Stack.Screen name="register" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="sell-modal" options={{ headerShown: false, animation: 'slide_from_left' }} />
-            <Stack.Screen name="listing-detail" options={{ presentation: 'modal', headerShown: false }} />
-            <Stack.Screen name="seller-listing-detail" options={{ presentation: 'modal', headerShown: false }} />
-            <Stack.Screen name="chat" options={{ headerShown: false }} />
-            <Stack.Screen name="threads" options={{ headerShown: false }} />
-            <Stack.Screen name="[category]" options={{ headerShown: false }} />
-            <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
-            <Stack.Screen name="settings" options={{ headerShown: false }} />
-          </Stack>
-          <StatusBar style="auto" />
-        </ThemeProvider>
-      </TamaguiProvider>
+      <AuthProvider>
+        <TamaguiProvider config={config} defaultTheme={colorScheme || 'light'}>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <Stack>
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="login" options={{ headerShown: false }} />
+              <Stack.Screen name="register" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="sell-modal" options={{ headerShown: false, animation: 'slide_from_left' }} />
+              <Stack.Screen name="listing-detail" options={{ presentation: 'modal', headerShown: false }} />
+              <Stack.Screen name="seller-listing-detail" options={{ presentation: 'modal', headerShown: false }} />
+              <Stack.Screen name="chat" options={{ headerShown: false }} />
+              <Stack.Screen name="threads" options={{ headerShown: false }} />
+              <Stack.Screen name="[category]" options={{ headerShown: false }} />
+              <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
+              <Stack.Screen name="settings" options={{ headerShown: false }} />
+            </Stack>
+            <StatusBar style="auto" />
+          </ThemeProvider>
+        </TamaguiProvider>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }

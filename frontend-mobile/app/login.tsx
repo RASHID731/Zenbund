@@ -3,25 +3,62 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { Mail, Lock } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { KeyboardAvoidingView, Platform } from 'react-native';
+import { KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuth } from '@/contexts/AuthContext';
+import { validateLoginForm } from '@/lib/validation';
 
 export default function LoginScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
+  const { login } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  function handleLogin() {
-    // TODO: Add real authentication logic here
-    // For now, just navigate to the main app
-    router.replace('/(tabs)');
+  /**
+   * Handle login button press.
+   * Validates form, calls API, navigates to app on success.
+   */
+  async function handleLogin() {
+    // Clear previous error
+    setErrorMessage('');
+
+    // Validate form inputs
+    const validation = validateLoginForm(email, password);
+    if (!validation.isValid) {
+      setErrorMessage(validation.error || 'Please check your inputs');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Call login function from AuthContext
+      // This calls the backend API and saves JWT token
+      const result = await login(email, password);
+
+      if (result.success) {
+        // Login successful! Navigate to main app
+        router.replace('/(tabs)');
+      } else {
+        // Login failed - show error message
+        setErrorMessage(result.message || 'Login failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setErrorMessage('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function handleSkip() {
+    // Dev only - bypass auth for testing
     router.replace('/(tabs)');
   }
 
@@ -130,21 +167,41 @@ export default function LoginScreen() {
             </XStack>
           </YStack>
 
+          {/* Error Message */}
+          {errorMessage ? (
+            <XStack
+              backgroundColor="#fee2e2"
+              borderRadius={12}
+              paddingHorizontal={16}
+              paddingVertical={12}
+              borderWidth={1}
+              borderColor="#ef4444"
+            >
+              <Text fontSize={14} color="#dc2626" fontFamily="$body">
+                {errorMessage}
+              </Text>
+            </XStack>
+          ) : null}
+
           {/* Login Button */}
           <YStack gap={12}>
             <XStack
-              backgroundColor={colors.primary}
+              backgroundColor={isLoading ? colors.textTertiary : colors.primary}
               borderRadius={12}
               paddingVertical={16}
               justifyContent="center"
               alignItems="center"
-              pressStyle={{ opacity: 0.8, scale: 0.98 }}
-              cursor="pointer"
-              onPress={handleLogin}
+              pressStyle={isLoading ? {} : { opacity: 0.8, scale: 0.98 }}
+              cursor={isLoading ? 'not-allowed' : 'pointer'}
+              onPress={isLoading ? undefined : handleLogin}
             >
-              <Text fontSize={17} fontWeight="700" color="white" fontFamily="$body">
-                Login
-              </Text>
+              {isLoading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text fontSize={17} fontWeight="700" color="white" fontFamily="$body">
+                  Login
+                </Text>
+              )}
             </XStack>
 
             {/* Skip Button - Dev Only */}
