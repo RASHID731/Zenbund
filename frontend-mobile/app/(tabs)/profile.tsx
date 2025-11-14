@@ -44,7 +44,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       <YStack flex={1} backgroundColor={colors.background}>
-        <Navbar />
+        <Navbar currentPage="profile" />
 
         <ScrollView flex={1} showsVerticalScrollIndicator={false}>
           <YStack paddingHorizontal={20} paddingTop={16} paddingBottom={32} gap={20} backgroundColor={colors.background}>
@@ -178,6 +178,7 @@ export default function ProfileScreen() {
               gap={8}
               pressStyle={{ opacity: 0.7, scale: 0.98, backgroundColor: colors.backgroundSecondary }}
               cursor="pointer"
+              onPress={() => router.push('/edit-profile')}
             >
               <Edit3 size={16} color={colors.textSecondary} strokeWidth={2.5} />
               <Text fontSize={15} fontWeight="600" color={colors.textSecondary} fontFamily="$body">

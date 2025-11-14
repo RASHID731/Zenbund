@@ -14,9 +14,7 @@ import config from '../tamagui.config';
 // Prevent splash screen from hiding automatically
 SplashScreen.preventAutoHideAsync();
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+// No longer need to set initialRouteName, using index.tsx redirect instead
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -43,13 +41,18 @@ export default function RootLayout() {
       <TamaguiProvider config={config} defaultTheme={colorScheme || 'light'}>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <Stack>
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="login" options={{ headerShown: false }} />
+            <Stack.Screen name="register" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="sell-modal" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="sell-modal" options={{ headerShown: false, animation: 'slide_from_left' }} />
             <Stack.Screen name="listing-detail" options={{ presentation: 'modal', headerShown: false }} />
             <Stack.Screen name="seller-listing-detail" options={{ presentation: 'modal', headerShown: false }} />
             <Stack.Screen name="chat" options={{ headerShown: false }} />
             <Stack.Screen name="threads" options={{ headerShown: false }} />
             <Stack.Screen name="[category]" options={{ headerShown: false }} />
+            <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
+            <Stack.Screen name="settings" options={{ headerShown: false }} />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>

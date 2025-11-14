@@ -1,13 +1,19 @@
 import { Text, XStack } from 'tamagui';
-import { MessageCircle, Plus } from 'lucide-react-native';
+import { MessageCircle, Plus, Settings } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-export function Navbar() {
+interface NavbarProps {
+  currentPage?: 'home' | 'profile' | 'search' | 'community';
+}
+
+export function Navbar({ currentPage = 'home' }: NavbarProps) {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
+
+  const isProfilePage = currentPage === 'profile';
 
   return (
     <XStack
@@ -45,7 +51,7 @@ export function Navbar() {
         Zenbund
       </Text>
 
-      {/* Right side - Chat Button */}
+      {/* Right side - Chat or Settings Button */}
       <XStack>
         <XStack
           width={40}
@@ -59,11 +65,15 @@ export function Navbar() {
             scale: 0.95,
           }}
           onPress={() => {
-            router.push('/chat');
+            router.push(isProfilePage ? '/settings' : '/chat');
           }}
           cursor="pointer"
         >
-          <MessageCircle size={20} color={colors.text} strokeWidth={2.5} />
+          {isProfilePage ? (
+            <Settings size={20} color={colors.text} strokeWidth={2.5} />
+          ) : (
+            <MessageCircle size={20} color={colors.text} strokeWidth={2.5} />
+          )}
         </XStack>
       </XStack>
     </XStack>
