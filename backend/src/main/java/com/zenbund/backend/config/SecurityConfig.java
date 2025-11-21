@@ -60,7 +60,8 @@ public class SecurityConfig {
                                 "/api/auth/register",      // Registration
                                 "/api/auth/login",         // Login
                                 "/api/categories/**",      // Categories (for now)
-                                "/api/offers/**"           // Offers (for now)
+                                "/api/offers/**",          // Offers (for now)
+                                "/api/threads/**"          // Threads (for now)
                         ).permitAll()
 
                         // ALL OTHER endpoints require authentication
