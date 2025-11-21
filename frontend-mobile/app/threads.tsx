@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Text, YStack, XStack, ScrollView } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Heart, MessageCircle } from 'lucide-react-native';
+import { ArrowLeft, Heart, MessageCircle, Settings } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -72,48 +72,64 @@ export default function ThreadsScreen() {
           borderBottomWidth={1}
           borderBottomColor={colors.border}
         >
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingHorizontal: 20,
-              paddingVertical: 12,
-              alignItems: 'center'
-            }}
-          >
-            <XStack gap={8}>
-              {JOINED_THREADS.map((thread) => {
-                const isActive = activeThreadId === thread.id;
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingHorizontal: 20,
+                paddingVertical: 12,
+                alignItems: 'center'
+              }}
+            >
+              <XStack gap={8}>
+                {JOINED_THREADS.map((thread) => {
+                  const isActive = activeThreadId === thread.id;
 
-                return (
-                  <XStack
-                    key={thread.id}
-                    backgroundColor={isActive ? colors.primary : colors.card}
-                    borderWidth={1}
-                    borderColor={isActive ? colors.primary : colors.border}
-                    borderRadius={20}
-                    paddingHorizontal={14}
-                    paddingVertical={6}
-                    alignItems="center"
-                    gap={6}
-                    pressStyle={{ opacity: 0.8, scale: 0.97 }}
-                    cursor="pointer"
-                    onPress={() => setActiveThreadId(thread.id)}
-                  >
-                    <Text fontSize={16}>{thread.emoji}</Text>
-                    <Text
-                      fontSize={13}
-                      fontWeight="600"
-                      color={isActive ? 'white' : colors.text}
-                      fontFamily="$body"
+                  return (
+                    <XStack
+                      key={thread.id}
+                      backgroundColor={isActive ? colors.primary : colors.card}
+                      borderWidth={1}
+                      borderColor={isActive ? colors.primary : colors.border}
+                      borderRadius={20}
+                      paddingHorizontal={14}
+                      paddingVertical={6}
+                      alignItems="center"
+                      gap={6}
+                      pressStyle={{ opacity: 0.8, scale: 0.97 }}
+                      cursor="pointer"
+                      onPress={() => setActiveThreadId(thread.id)}
                     >
-                      {thread.name}
-                    </Text>
-                  </XStack>
-                );
-              })}
-            </XStack>
-          </ScrollView>
+                      <Text fontSize={16}>{thread.emoji}</Text>
+                      <Text
+                        fontSize={13}
+                        fontWeight="600"
+                        color={isActive ? 'white' : colors.text}
+                        fontFamily="$body"
+                      >
+                        {thread.name}
+                      </Text>
+                    </XStack>
+                  );
+                })}
+
+                {/* Settings Pill */}
+                <XStack
+                  backgroundColor={colors.card}
+                  borderWidth={1}
+                  borderColor={colors.border}
+                  borderRadius={20}
+                  paddingHorizontal={12}
+                  paddingVertical={6}
+                  alignItems="center"
+                  pressStyle={{ opacity: 0.8, scale: 0.97 }}
+                  cursor="pointer"
+                  onPress={() => router.push('/thread-settings')}
+                >
+                  <Settings size={18} color={colors.text} strokeWidth={2} />
+                </XStack>
+              </XStack>
+            </ScrollView>
         </YStack>
 
         {/* Comments (Reddit-style) */}
