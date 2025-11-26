@@ -61,7 +61,8 @@ public class SecurityConfig {
                                 "/api/auth/login",         // Login
                                 "/api/categories/**",      // Categories (for now)
                                 "/api/offers/**",          // Offers (for now)
-                                "/api/threads/**"          // Threads (for now)
+                                "/api/threads/**",         // Threads (for now)
+                                "/api/thread-members/**"   // Thread memberships (for now)
                         ).permitAll()
 
                         // ALL OTHER endpoints require authentication

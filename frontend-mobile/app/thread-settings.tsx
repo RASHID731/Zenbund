@@ -1,38 +1,70 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Text, YStack, XStack, Switch } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
-// Mock data - same threads as in threads.tsx
-// In the future, this would come from a shared state/context
-const JOINED_THREADS = [
-  { id: '1', name: 'Study Group', emoji: '📚' },
-  { id: '2', name: 'Gaming Club', emoji: '🎮' },
-  { id: '3', name: 'Art Society', emoji: '🎨' }
-];
+import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
+import { ThreadMember } from '@/types';
+import { Alert } from 'react-native';
 
 export default function ThreadSettingsScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
+  const { user } = useAuth();
 
-  // State to track anonymous setting for each thread
-  // Key: thread id, Value: boolean (true = post anonymously)
-  const [anonymousSettings, setAnonymousSettings] = useState<Record<string, boolean>>({
-    '1': false,
-    '2': false,
-    '3': false,
-  });
+  const [memberships, setMemberships] = useState<ThreadMember[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch user's memberships on mount
+  useEffect(() => {
+    fetchMemberships();
+  }, [user?.userId]);
+
+  const fetchMemberships = async () => {
+    if (!user?.userId) return;
+
+    setLoading(true);
+    try {
+      const response = await apiClient.get<ThreadMember[]>(
+        `/thread-members?userId=${user.userId}`
+      );
+
+      if (response.success) {
+        setMemberships(response.data);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to load thread settings');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Toggle anonymous setting for a specific thread
-  const toggleAnonymous = (threadId: string) => {
-    setAnonymousSettings(prev => ({
-      ...prev,
-      [threadId]: !prev[threadId]
-    }));
+  const toggleAnonymous = async (membership: ThreadMember) => {
+    try {
+      const newValue = !membership.postAnonymously;
+
+      const response = await apiClient.put(`/thread-members/${membership.id}`, {
+        postAnonymously: newValue,
+      });
+
+      if (response.success) {
+        // Update local state
+        setMemberships(memberships.map(m =>
+          m.id === membership.id
+            ? { ...m, postAnonymously: newValue }
+            : m
+        ));
+      } else {
+        Alert.alert('Error', response.message || 'Failed to update setting');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update setting');
+    }
   };
 
   return (
@@ -78,10 +110,24 @@ export default function ThreadSettingsScreen() {
             Choose which threads you want to post anonymously in.
           </Text>
 
+          {/* Loading State */}
+          {loading && (
+            <Text fontSize={14} color={colors.textSecondary} textAlign="center" paddingVertical={20}>
+              Loading settings...
+            </Text>
+          )}
+
+          {/* Empty State */}
+          {!loading && memberships.length === 0 && (
+            <Text fontSize={14} color={colors.textSecondary} textAlign="center" paddingVertical={20}>
+              No threads joined yet
+            </Text>
+          )}
+
           {/* Thread list with toggles */}
-          {JOINED_THREADS.map((thread) => (
+          {!loading && memberships.map((membership) => (
             <XStack
-              key={thread.id}
+              key={membership.id}
               backgroundColor={colors.card}
               borderRadius={16}
               paddingHorizontal={16}
@@ -93,18 +139,18 @@ export default function ThreadSettingsScreen() {
             >
               {/* Left side: emoji + thread name */}
               <XStack alignItems="center" gap={12}>
-                <Text fontSize={24}>{thread.emoji}</Text>
+                <Text fontSize={24}>{membership.threadEmoji || '💬'}</Text>
                 <Text fontSize={16} fontWeight="600" color={colors.text} fontFamily="$body">
-                  {thread.name}
+                  {membership.threadName || 'Unknown'}
                 </Text>
               </XStack>
 
               {/* Right side: toggle switch */}
               <Switch
                 size="$4"
-                checked={anonymousSettings[thread.id] || false}
-                onCheckedChange={() => toggleAnonymous(thread.id)}
-                backgroundColor={anonymousSettings[thread.id] ? colors.primary : colors.backgroundTertiary}
+                checked={membership.postAnonymously || false}
+                onCheckedChange={() => toggleAnonymous(membership)}
+                backgroundColor={membership.postAnonymously ? colors.primary : colors.backgroundTertiary}
               >
                 <Switch.Thumb
                   animation="quick"

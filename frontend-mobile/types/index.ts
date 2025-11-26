@@ -61,6 +61,9 @@ export interface ThreadMember {
   threadId: number;
   postAnonymously: boolean;
   joinedAt: string;
+  // Convenience fields from backend response
+  threadName?: string;
+  threadEmoji?: string;
   // Populated relationships
   user?: User;
   thread?: Thread;

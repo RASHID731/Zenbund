@@ -134,6 +134,30 @@ export class ApiClient {
     }
   }
 
+  async put<T>(endpoint: string, data: any): Promise<ApiResponse<T>> {
+    try {
+      const response = await this.axiosInstance.put<T>(endpoint, data);
+      return {
+        data: response.data,
+        success: true,
+      };
+    } catch (error) {
+      return this.handleError<T>(error);
+    }
+  }
+
+  async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
+    try {
+      const response = await this.axiosInstance.delete<T>(endpoint);
+      return {
+        data: response.data,
+        success: true,
+      };
+    } catch (error) {
+      return this.handleError<T>(error);
+    }
+  }
+
   private handleError<T>(error: unknown): ApiResponse<T> {
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError<{ message?: string }>;

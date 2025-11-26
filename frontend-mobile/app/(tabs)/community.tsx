@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Text, YStack, XStack, ScrollView } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Navbar } from '@/components/navbar';
@@ -6,55 +6,121 @@ import { ChevronRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
-const THREADS = [
-  {
-    id: '1',
-    name: 'Study Group',
-    emoji: '📚',
-    members: '1.2k',
-    description: 'Share study materials and help each other with assignments'
-  },
-  {
-    id: '2',
-    name: 'Gaming Club',
-    emoji: '🎮',
-    members: '856',
-    description: 'Connect with fellow gamers and organize tournaments'
-  },
-  {
-    id: '3',
-    name: 'Art Society',
-    emoji: '🎨',
-    members: '423',
-    description: 'Share your artwork and collaborate on creative projects'
-  },
-  {
-    id: '4',
-    name: 'Fitness Group',
-    emoji: '🏃',
-    members: '678',
-    description: 'Stay active together with workout sessions and challenges'
-  }
-];
+import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
+import { Thread, ThreadMember } from '@/types';
+import { Alert } from 'react-native';
 
 export default function CommunityScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
   const router = useRouter();
+  const { user } = useAuth();
 
-  const [joinedThreads, setJoinedThreads] = useState<string[]>([]);
+  const [threads, setThreads] = useState<Thread[]>([]);
+  const [memberships, setMemberships] = useState<ThreadMember[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const toggleJoinThread = (threadId: string) => {
-    if (joinedThreads.includes(threadId)) {
-      setJoinedThreads(joinedThreads.filter(id => id !== threadId));
-    } else {
-      setJoinedThreads([...joinedThreads, threadId]);
+  // Fetch threads and memberships on mount
+  useEffect(() => {
+    fetchData();
+  }, [user?.userId]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // Fetch all threads (public endpoint)
+      const threadsResponse = await apiClient.get<Thread[]>('/threads');
+      if (threadsResponse.success) {
+        setThreads(threadsResponse.data);
+      }
+
+      // Fetch user's memberships (only if logged in)
+      if (user?.userId) {
+        const membershipsResponse = await apiClient.get<ThreadMember[]>(
+          `/thread-members?userId=${user.userId}`
+        );
+        if (membershipsResponse.success) {
+          setMemberships(membershipsResponse.data);
+        }
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to load threads');
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleJoinPress = async (threadId: number) => {
+    if (!user?.userId) return;
+
+    try {
+      const response = await apiClient.post<ThreadMember>('/thread-members', {
+        userId: user.userId,
+        threadId: threadId,
+      });
+
+      if (response.success) {
+        // Add to memberships
+        setMemberships([...memberships, response.data]);
+
+        // Update thread's member count
+        setThreads(threads.map(t =>
+          t.id === threadId
+            ? { ...t, memberCount: t.memberCount + 1 }
+            : t
+        ));
+      } else {
+        Alert.alert('Error', response.message || 'Failed to join thread');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to join thread');
+    }
+  };
+
+  const handleLeavePress = async (threadId: number) => {
+    if (!user?.userId) return;
+
+    // Find the membership
+    const membership = memberships.find(m => m.threadId === threadId);
+    if (!membership) return;
+
+    Alert.alert(
+      'Leave Thread',
+      'Are you sure you want to leave this thread?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await apiClient.delete(`/thread-members/${membership.id}`);
+
+              if (response.success) {
+                // Remove from memberships
+                setMemberships(memberships.filter(m => m.id !== membership.id));
+
+                // Update thread's member count
+                setThreads(threads.map(t =>
+                  t.id === threadId
+                    ? { ...t, memberCount: Math.max(0, t.memberCount - 1) }
+                    : t
+                ));
+              } else {
+                Alert.alert('Error', response.message || 'Failed to leave thread');
+              }
+            } catch (error) {
+              Alert.alert('Error', 'Failed to leave thread');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const navigateToThreads = () => {
-    if (joinedThreads.length > 0) {
+    if (memberships.length > 0) {
       router.push('/threads');
     }
   };
@@ -77,7 +143,7 @@ export default function CommunityScreen() {
                 pressStyle={{ opacity: 0.7 }}
                 cursor="pointer"
                 onPress={navigateToThreads}
-                opacity={joinedThreads.length === 0 ? 0.4 : 1}
+                opacity={memberships.length === 0 ? 0.4 : 1}
               >
                 <Text fontSize={14} color={colors.primary} fontWeight="600" fontFamily="$body">
                   Go to threads
@@ -86,69 +152,78 @@ export default function CommunityScreen() {
               </XStack>
             </XStack>
 
+            {/* Loading State */}
+            {loading && (
+              <Text fontSize={14} color={colors.textSecondary} textAlign="center" paddingVertical={20}>
+                Loading threads...
+              </Text>
+            )}
+
             {/* Threads List */}
-            <YStack gap={16}>
-              {THREADS.map((thread) => {
-                const isJoined = joinedThreads.includes(thread.id);
+            {!loading && (
+              <YStack gap={16}>
+                {threads.map((thread) => {
+                  const isJoined = memberships.some(m => m.threadId === thread.id);
 
-                return (
-                  <XStack
-                    key={thread.id}
-                    backgroundColor={colors.card}
-                    borderWidth={1}
-                    borderColor={colors.border}
-                    borderRadius={20}
-                    padding={14}
-                    alignItems="center"
-                    gap={12}
-                  >
-                    <YStack
-                      width={56}
-                      height={56}
-                      backgroundColor={colorScheme === 'light' ? '#F5F4FE' : '#38347F'}
-                      borderRadius={20}
-                      justifyContent="center"
-                      alignItems="center"
-                    >
-                      <Text fontSize={28}>{thread.emoji}</Text>
-                    </YStack>
-
-                    <YStack flex={1} gap={4}>
-                      <Text fontSize={16} fontWeight="600" color={colors.text} fontFamily="$body">
-                        {thread.name}
-                      </Text>
-                      <Text fontSize={13} color={colors.textSecondary} fontFamily="$body">
-                        {thread.members} members
-                      </Text>
-                      <Text fontSize={14} color={colors.textSecondary} fontFamily="$body" numberOfLines={2} lineHeight={20}>
-                        {thread.description}
-                      </Text>
-                    </YStack>
-
+                  return (
                     <XStack
-                      backgroundColor={isJoined ? colors.background : colors.primary}
-                      borderWidth={isJoined ? 1.5 : 0}
-                      borderColor={isJoined ? colors.border : 'transparent'}
+                      key={thread.id}
+                      backgroundColor={colors.card}
+                      borderWidth={1}
+                      borderColor={colors.border}
                       borderRadius={20}
-                      paddingHorizontal={16}
-                      paddingVertical={10}
-                      pressStyle={{ opacity: 0.8, scale: 0.98 }}
-                      cursor="pointer"
-                      onPress={() => toggleJoinThread(thread.id)}
+                      padding={14}
+                      alignItems="center"
+                      gap={12}
                     >
-                      <Text
-                        fontSize={14}
-                        fontWeight="600"
-                        color={isJoined ? colors.textSecondary : 'white'}
-                        fontFamily="$body"
+                      <YStack
+                        width={56}
+                        height={56}
+                        backgroundColor={colorScheme === 'light' ? '#F5F4FE' : '#38347F'}
+                        borderRadius={20}
+                        justifyContent="center"
+                        alignItems="center"
                       >
-                        {isJoined ? 'Joined' : 'Join'}
-                      </Text>
+                        <Text fontSize={28}>{thread.emoji}</Text>
+                      </YStack>
+
+                      <YStack flex={1} gap={4}>
+                        <Text fontSize={16} fontWeight="600" color={colors.text} fontFamily="$body">
+                          {thread.name}
+                        </Text>
+                        <Text fontSize={13} color={colors.textSecondary} fontFamily="$body">
+                          {thread.memberCount} members
+                        </Text>
+                        <Text fontSize={14} color={colors.textSecondary} fontFamily="$body" numberOfLines={2} lineHeight={20}>
+                          {thread.description}
+                        </Text>
+                      </YStack>
+
+                      <XStack
+                        backgroundColor={isJoined ? 'transparent' : colors.primary}
+                        borderWidth={isJoined ? 1.5 : 0}
+                        borderColor={isJoined ? '#EF4444' : 'transparent'}
+                        borderRadius={20}
+                        paddingHorizontal={16}
+                        paddingVertical={10}
+                        pressStyle={{ opacity: 0.8, scale: 0.98 }}
+                        cursor="pointer"
+                        onPress={() => isJoined ? handleLeavePress(thread.id) : handleJoinPress(thread.id)}
+                      >
+                        <Text
+                          fontSize={14}
+                          fontWeight="600"
+                          color={isJoined ? '#EF4444' : 'white'}
+                          fontFamily="$body"
+                        >
+                          {isJoined ? 'Leave' : 'Join'}
+                        </Text>
+                      </XStack>
                     </XStack>
-                  </XStack>
-                );
-              })}
-            </YStack>
+                  );
+                })}
+              </YStack>
+            )}
           </YStack>
         </ScrollView>
       </YStack>
