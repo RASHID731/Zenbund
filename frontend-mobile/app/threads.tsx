@@ -1,13 +1,72 @@
 import { useState, useEffect } from 'react';
 import { Text, YStack, XStack, ScrollView } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Settings } from 'lucide-react-native';
+import { ArrowLeft, Settings, Heart, MessageCircle, Plus } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api';
 import { ThreadMember } from '@/types';
+
+// Mock comment data
+const MOCK_COMMENTS = [
+  {
+    id: 1,
+    userId: 1,
+    username: 'Sarah Chen',
+    avatar: '👩‍💼',
+    text: 'Anyone has notes from yesterday\'s lecture? I had to leave early for an appointment.',
+    isAnonymous: false,
+    likes: 12,
+    replyCount: 3,
+    createdAt: '2h ago',
+  },
+  {
+    id: 2,
+    userId: null,
+    username: 'Anonymous',
+    avatar: '👤',
+    text: 'The midterm is going to be tough. Has anyone started studying yet?',
+    isAnonymous: true,
+    likes: 8,
+    replyCount: 5,
+    createdAt: '3h ago',
+  },
+  {
+    id: 3,
+    userId: 3,
+    username: 'Mike Johnson',
+    avatar: '👨‍🎓',
+    text: 'I can share my notes! Give me a sec to upload them.',
+    isAnonymous: false,
+    likes: 24,
+    replyCount: 8,
+    createdAt: '4h ago',
+  },
+  {
+    id: 4,
+    userId: null,
+    username: 'Anonymous',
+    avatar: '👤',
+    text: 'Does anyone know if the professor posts slides after class?',
+    isAnonymous: true,
+    likes: 6,
+    replyCount: 2,
+    createdAt: '5h ago',
+  },
+  {
+    id: 5,
+    userId: 5,
+    username: 'Emma Davis',
+    avatar: '👩‍🎓',
+    text: 'Thanks everyone for the help! This community is amazing 💙',
+    isAnonymous: false,
+    likes: 18,
+    replyCount: 1,
+    createdAt: '6h ago',
+  },
+];
 
 export default function ThreadsScreen() {
   const router = useRouter();
@@ -158,16 +217,104 @@ export default function ThreadsScreen() {
             </ScrollView>
         </YStack>
 
-        {/* Empty State - Comments Coming Soon */}
-        <YStack flex={1} justifyContent="center" alignItems="center" paddingHorizontal={40}>
-          <Text fontSize={48} marginBottom={16}>💬</Text>
-          <Text fontSize={18} fontWeight="700" color={colors.text} fontFamily="$body" textAlign="center" marginBottom={8}>
-            Comments Coming Soon
-          </Text>
-          <Text fontSize={14} color={colors.textSecondary} fontFamily="$body" textAlign="center" lineHeight={20}>
-            Thread discussions will be available here once the comment system is implemented.
-          </Text>
-        </YStack>
+        {/* Comments List */}
+        <ScrollView flex={1} showsVerticalScrollIndicator={false}>
+          <YStack>
+            {MOCK_COMMENTS.map((comment) => (
+              <YStack
+                key={comment.id}
+                backgroundColor={colors.card}
+                paddingVertical={18}
+                paddingHorizontal={24}
+                gap={10}
+                borderBottomWidth={1}
+                borderColor={colors.border}
+              >
+                {/* User Info */}
+                <XStack alignItems="center" gap={12}>
+                  <YStack
+                    width={40}
+                    height={40}
+                    borderRadius={20}
+                    backgroundColor={colors.backgroundSecondary}
+                    justifyContent="center"
+                    alignItems="center"
+                  >
+                    <Text fontSize={20}>{comment.avatar}</Text>
+                  </YStack>
+                  <YStack flex={1}>
+                    <Text fontSize={15} fontWeight="600" color={colors.text} fontFamily="$body">
+                      {comment.username}
+                    </Text>
+                    <Text fontSize={12} color={colors.textSecondary} fontFamily="$body">
+                      {comment.createdAt}
+                    </Text>
+                  </YStack>
+                </XStack>
+
+                {/* Comment Text */}
+                <Text fontSize={14} color={colors.text} fontFamily="$body" lineHeight={20}>
+                  {comment.text}
+                </Text>
+
+                {/* Action Buttons */}
+                <XStack gap={24} paddingTop={4}>
+                  {/* Like Button */}
+                  <XStack
+                    alignItems="center"
+                    gap={6}
+                    pressStyle={{ opacity: 0.7 }}
+                    cursor="pointer"
+                  >
+                    <Heart size={18} color={colors.textSecondary} strokeWidth={2} />
+                    <Text fontSize={13} color={colors.textSecondary} fontWeight="500" fontFamily="$body">
+                      {comment.likes}
+                    </Text>
+                  </XStack>
+
+                  {/* Comment/Reply Button */}
+                  <XStack
+                    alignItems="center"
+                    gap={6}
+                    pressStyle={{ opacity: 0.7 }}
+                    cursor="pointer"
+                  >
+                    <MessageCircle size={18} color={colors.textSecondary} strokeWidth={2} />
+                    <Text fontSize={13} color={colors.textSecondary} fontWeight="500" fontFamily="$body">
+                      {comment.replyCount}
+                    </Text>
+                  </XStack>
+                </XStack>
+              </YStack>
+            ))}
+
+            {/* Bottom padding for FAB */}
+            <YStack height={80} />
+          </YStack>
+        </ScrollView>
+
+        {/* Floating Action Button */}
+        <XStack
+          position="absolute"
+          bottom={36}
+          right={24}
+          width={56}
+          height={56}
+          borderRadius={99}
+          backgroundColor={colors.primary}
+          justifyContent="center"
+          alignItems="center"
+          pressStyle={{ opacity: 0.8, scale: 0.95 }}
+          cursor="pointer"
+          onPress={() => router.push('/add-comment-modal')}
+          shadowColor="#000"
+          shadowOffset={{ width: 0, height: 4 }}
+          shadowOpacity={0.3}
+          shadowRadius={4}
+          elevation={8}
+        >
+          <Plus size={28} color="white" strokeWidth={2.5} />
+        </XStack>
       </YStack>
     </SafeAreaView>
   );
