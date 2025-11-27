@@ -46,7 +46,7 @@ export default function ThreadSettingsScreen() {
   // Toggle anonymous setting for a specific thread
   const toggleAnonymous = async (membership: ThreadMember) => {
     try {
-      const newValue = !membership.postAnonymously;
+      const newValue = membership.postAnonymously !== true;
 
       const response = await apiClient.put(`/thread-members/${membership.id}`, {
         postAnonymously: newValue,
@@ -148,7 +148,7 @@ export default function ThreadSettingsScreen() {
               {/* Right side: toggle switch */}
               <Switch
                 size="$4"
-                checked={membership.postAnonymously || false}
+                checked={membership.postAnonymously}
                 onCheckedChange={() => toggleAnonymous(membership)}
                 backgroundColor={membership.postAnonymously ? colors.primary : colors.backgroundTertiary}
               >
