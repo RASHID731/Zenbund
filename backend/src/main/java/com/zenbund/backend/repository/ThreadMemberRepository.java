@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ThreadMemberRepository extends JpaRepository<ThreadMember, Long> {
@@ -20,6 +21,13 @@ public interface ThreadMemberRepository extends JpaRepository<ThreadMember, Long
      * Used to get list of users in a thread.
      */
     List<ThreadMember> findByThreadId(Long threadId);
+
+    /**
+     * Find a specific membership by user and thread.
+     * Returns the ThreadMember if found, empty Optional if not.
+     * Used to get user's settings for a specific thread.
+     */
+    Optional<ThreadMember> findByUserIdAndThreadId(Long userId, Long threadId);
 
     /**
      * Check if a membership exists between user and thread.

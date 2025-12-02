@@ -1,34 +1,91 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Text, YStack, XStack, TextArea, ScrollView } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Settings } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
+import { ThreadMember } from '@/types';
 
 export default function AddCommentModal() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
+  const { user } = useAuth();
+  const { threadId } = useLocalSearchParams<{ threadId: string }>();
 
   const [commentText, setCommentText] = useState('');
   const [errors, setErrors] = useState<{ text?: string }>({});
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [fetchingSettings, setFetchingSettings] = useState(true);
 
-  // Mock: In the future, this will come from the user's thread membership settings
-  const isAnonymous = false; // This would be fetched from ThreadMember.postAnonymously
+  // Fetch user's ThreadMember settings for this thread
+  useEffect(() => {
+    fetchThreadMemberSettings();
+  }, [threadId, user?.userId]);
 
-  const handleSubmit = () => {
+  // Refresh settings when screen comes back into focus (e.g., after returning from settings)
+  useFocusEffect(
+    useCallback(() => {
+      fetchThreadMemberSettings();
+    }, [threadId, user?.userId])
+  );
+
+  const fetchThreadMemberSettings = async () => {
+    if (!user?.userId || !threadId) {
+      setFetchingSettings(false);
+      return;
+    }
+
+    try {
+      const response = await apiClient.get<ThreadMember>(
+        `/thread-members?userId=${user.userId}&threadId=${threadId}`
+      );
+
+      if (response.success) {
+        setIsAnonymous(response.data.postAnonymously);
+      }
+    } catch (error) {
+      console.error('Failed to fetch thread member settings:', error);
+    } finally {
+      setFetchingSettings(false);
+    }
+  };
+
+  const handleSubmit = async () => {
     // Validation
     if (!commentText.trim()) {
       setErrors({ text: 'Comment cannot be empty' });
       return;
     }
 
-    // TODO: In the future, this will make an API call to create the comment
-    console.log('Comment submitted:', { commentText, isAnonymous });
+    if (!threadId) {
+      setErrors({ text: 'Thread ID is missing' });
+      return;
+    }
 
-    // Close modal
-    router.back();
+    setLoading(true);
+    try {
+      const response = await apiClient.post('/comments', {
+        threadId: parseInt(threadId),
+        text: commentText.trim(),
+        parentCommentId: null, // null for parent comments
+      });
+
+      if (response.success) {
+        // Close modal and refresh comments list
+        router.back();
+      }
+    } catch (error) {
+      console.error('Failed to create comment:', error);
+      setErrors({ text: 'Failed to post comment. Please try again.' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -144,18 +201,19 @@ export default function AddCommentModal() {
 
             {/* Submit Button */}
             <XStack
-              backgroundColor={colors.primary}
+              backgroundColor={loading ? colors.textTertiary : colors.primary}
               borderRadius={12}
               paddingVertical={16}
               justifyContent="center"
               alignItems="center"
               marginTop={8}
-              pressStyle={{ opacity: 0.8, scale: 0.98 }}
-              cursor="pointer"
-              onPress={handleSubmit}
+              pressStyle={loading ? {} : { opacity: 0.8, scale: 0.98 }}
+              cursor={loading ? "not-allowed" : "pointer"}
+              onPress={loading ? undefined : handleSubmit}
+              opacity={loading ? 0.6 : 1}
             >
               <Text fontSize={17} fontWeight="700" color="white" fontFamily="$body">
-                Post Comment
+                {loading ? 'Posting...' : 'Post Comment'}
               </Text>
             </XStack>
           </YStack>

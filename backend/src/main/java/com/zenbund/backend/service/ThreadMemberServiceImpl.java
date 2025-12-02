@@ -145,4 +145,23 @@ public class ThreadMemberServiceImpl implements ThreadMemberService {
     public boolean isMember(Long userId, Long threadId) {
         return threadMemberRepository.existsByUserIdAndThreadId(userId, threadId);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ThreadMemberResponse getMembershipByUserAndThread(Long userId, Long threadId) {
+        ThreadMember member = threadMemberRepository.findByUserIdAndThreadId(userId, threadId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Membership not found for userId: " + userId + " and threadId: " + threadId));
+
+        ThreadMemberResponse response = ThreadMemberResponse.fromEntity(member);
+
+        // Fetch thread details
+        threadRepository.findById(member.getThreadId())
+                .ifPresent(thread -> {
+                    response.setThreadName(thread.getName());
+                    response.setThreadEmoji(thread.getEmoji());
+                });
+
+        return response;
+    }
 }

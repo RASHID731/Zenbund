@@ -63,4 +63,14 @@ public interface ThreadMemberService {
      * @return true if user is a member
      */
     boolean isMember(Long userId, Long threadId);
+
+    /**
+     * Get a specific membership by userId and threadId.
+     *
+     * @param userId the user ID
+     * @param threadId the thread ID
+     * @return the membership
+     * @throws com.zenbund.backend.exception.ResourceNotFoundException if not found
+     */
+    ThreadMemberResponse getMembershipByUserAndThread(Long userId, Long threadId);
 }

@@ -41,12 +41,22 @@ public class ThreadMemberController {
     }
 
     /**
-     * Get all memberships for a user
+     * Get memberships - supports filtering by userId and/or threadId
      * GET /api/thread-members?userId={userId}
+     * GET /api/thread-members?userId={userId}&threadId={threadId}
      */
     @GetMapping
-    public ResponseEntity<List<ThreadMemberResponse>> getMembershipsByUserId(
-            @RequestParam Long userId) {
+    public ResponseEntity<?> getMemberships(
+            @RequestParam Long userId,
+            @RequestParam(required = false) Long threadId) {
+
+        // If both userId and threadId provided, return single membership
+        if (threadId != null) {
+            ThreadMemberResponse membership = threadMemberService.getMembershipByUserAndThread(userId, threadId);
+            return ResponseEntity.ok(membership);
+        }
+
+        // Otherwise return all memberships for the user
         List<ThreadMemberResponse> memberships = threadMemberService.getMembershipsByUserId(userId);
         return ResponseEntity.ok(memberships);
     }
