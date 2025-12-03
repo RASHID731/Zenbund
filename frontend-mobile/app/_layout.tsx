@@ -2,7 +2,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
-import { TamaguiProvider } from 'tamagui';
+import { PortalProvider, TamaguiProvider } from 'tamagui';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts, DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import * as SplashScreen from 'expo-splash-screen';
@@ -41,25 +41,27 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <AuthProvider>
         <TamaguiProvider config={config} defaultTheme={colorScheme || 'light'}>
-          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <Stack>
-              <Stack.Screen name="index" options={{ headerShown: false }} />
-              <Stack.Screen name="login" options={{ headerShown: false }} />
-              <Stack.Screen name="register" options={{ headerShown: false }} />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="sell-modal" options={{ headerShown: false, animation: 'slide_from_left' }} />
-              <Stack.Screen name="listing-detail" options={{ presentation: 'modal', headerShown: false }} />
-              <Stack.Screen name="seller-listing-detail" options={{ presentation: 'modal', headerShown: false }} />
-              <Stack.Screen name="chat" options={{ headerShown: false }} />
-              <Stack.Screen name="threads" options={{ headerShown: false }} />
-              <Stack.Screen name="[category]" options={{ headerShown: false }} />
-              <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
-              <Stack.Screen name="settings" options={{ headerShown: false }} />
-              <Stack.Screen name="thread-settings" options={{ presentation: 'modal', headerShown: false }} />
-              <Stack.Screen name="add-comment-modal" options={{ presentation: 'modal', headerShown: false }} />
-            </Stack>
-            <StatusBar style="auto" />
-          </ThemeProvider>
+          <PortalProvider>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <Stack>
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen name="login" options={{ headerShown: false }} />
+                <Stack.Screen name="register" options={{ headerShown: false }} />
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="sell-modal" options={{ headerShown: false, animation: 'slide_from_left' }} />
+                <Stack.Screen name="listing-detail" options={{ presentation: 'modal', headerShown: false }} />
+                <Stack.Screen name="seller-listing-detail" options={{ presentation: 'modal', headerShown: false }} />
+                <Stack.Screen name="chat" options={{ headerShown: false }} />
+                <Stack.Screen name="threads" options={{ headerShown: false }} />
+                <Stack.Screen name="[category]" options={{ headerShown: false }} />
+                <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
+                <Stack.Screen name="settings" options={{ headerShown: false }} />
+                <Stack.Screen name="thread-settings" options={{ presentation: 'modal', headerShown: false }} />
+                <Stack.Screen name="add-comment-modal" options={{ presentation: 'modal', headerShown: false }} />
+              </Stack>
+              <StatusBar style="auto" />
+            </ThemeProvider>
+          </PortalProvider>
         </TamaguiProvider>
       </AuthProvider>
     </SafeAreaProvider>

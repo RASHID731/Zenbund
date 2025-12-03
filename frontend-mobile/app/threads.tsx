@@ -212,6 +212,7 @@ export default function ThreadsScreen() {
   };
 
   return (
+    <>
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       <YStack flex={1} backgroundColor={colors.background}>
         {/* Header */}
@@ -566,66 +567,68 @@ export default function ThreadsScreen() {
           </XStack>
         )}
 
-        {/* Comment Actions Sheet */}
-        <Sheet
-          modal
-          open={sheetOpen}
-          onOpenChange={setSheetOpen}
-          snapPoints={[25]}
-          dismissOnSnapToBottom
-          zIndex={100000}
-          animation="medium"
-        >
-          <Sheet.Overlay
-            animation="lazy"
-            enterStyle={{ opacity: 0 }}
-            exitStyle={{ opacity: 0 }}
-            backgroundColor="rgba(0, 0, 0, 0.5)"
-          />
-          <Sheet.Frame
-            backgroundColor={colors.card}
-            borderTopLeftRadius={16}
-            borderTopRightRadius={16}
-            paddingBottom={32}
-          >
-            <YStack gap={0}>
-              {/* Edit Action */}
-              <XStack
-                paddingVertical={18}
-                paddingHorizontal={24}
-                alignItems="center"
-                gap={12}
-                pressStyle={{ opacity: 0.7, backgroundColor: colors.backgroundSecondary }}
-                cursor="pointer"
-                onPress={handleSheetEditAction}
-                borderBottomWidth={1}
-                borderBottomColor={colors.border}
-              >
-                <Edit2 size={20} color={colors.primary} strokeWidth={2} />
-                <Text fontSize={16} fontWeight="600" color={colors.text} fontFamily="$body">
-                  Edit
-                </Text>
-              </XStack>
-
-              {/* Delete Action */}
-              <XStack
-                paddingVertical={18}
-                paddingHorizontal={24}
-                alignItems="center"
-                gap={12}
-                pressStyle={{ opacity: 0.7, backgroundColor: colors.backgroundSecondary }}
-                cursor="pointer"
-                onPress={handleSheetDeleteAction}
-              >
-                <Trash2 size={20} color="#ef4444" strokeWidth={2} />
-                <Text fontSize={16} fontWeight="600" color="#ef4444" fontFamily="$body">
-                  Delete
-                </Text>
-              </XStack>
-            </YStack>
-          </Sheet.Frame>
-        </Sheet>
       </YStack>
     </SafeAreaView>
-  );
+
+    {/* Comment Actions Sheet */}
+    <Sheet
+      open={sheetOpen}
+      onOpenChange={setSheetOpen}
+      snapPoints={[17]}
+      dismissOnSnapToBottom
+      zIndex={100000}
+      animation="medium"
+    >
+      <Sheet.Overlay
+        animation="lazy"
+        enterStyle={{ opacity: 0 }}
+        exitStyle={{ opacity: 0 }}
+        backgroundColor="rgba(0, 0, 0, 0.1)"
+      />
+      <Sheet.Frame
+        backgroundColor={colors.card}
+        borderTopLeftRadius={16}
+        borderTopRightRadius={16}
+        borderWidth={1}
+        borderColor={colors.border}
+      >
+        <YStack gap={0}>
+          {/* Edit Action */}
+          <XStack
+            paddingVertical={18}
+            paddingHorizontal={24}
+            alignItems="center"
+            gap={12}
+            pressStyle={{ opacity: 0.7, backgroundColor: colors.backgroundSecondary }}
+            cursor="pointer"
+            onPress={handleSheetEditAction}
+            borderBottomWidth={1}
+            borderBottomColor={colors.border}
+          >
+            <Edit2 size={20} color={colors.primary} strokeWidth={2} />
+            <Text fontSize={16} fontWeight="600" color={colors.text} fontFamily="$body">
+              Edit
+            </Text>
+          </XStack>
+
+          {/* Delete Action */}
+          <XStack
+            paddingVertical={18}
+            paddingHorizontal={24}
+            alignItems="center"
+            gap={12}
+            pressStyle={{ opacity: 0.7, backgroundColor: colors.backgroundSecondary }}
+            cursor="pointer"
+            onPress={handleSheetDeleteAction}
+          >
+            <Trash2 size={20} color="#ef4444" strokeWidth={2} />
+            <Text fontSize={16} fontWeight="600" color="#ef4444" fontFamily="$body">
+              Delete
+            </Text>
+          </XStack>
+        </YStack>
+      </Sheet.Frame>
+    </Sheet>
+  </>
+);
 }
