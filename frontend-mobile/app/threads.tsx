@@ -340,9 +340,12 @@ export default function ThreadsScreen() {
                     backgroundColor={colors.card}
                     paddingVertical={18}
                     paddingHorizontal={24}
-                    gap={10}
-                    borderBottomWidth={comment.replies && comment.replies.length > 0 ? 0 : 1}
+                    gap={2}
+                    borderBottomWidth={1}
                     borderColor={colors.border}
+                    pressStyle={{ opacity: 0.7, backgroundColor: colors.backgroundSecondary }}
+                    cursor="pointer"
+                    onPress={() => editingCommentId !== comment.id && router.push(`/comment-replies?commentId=${comment.id}&threadId=${activeThreadId}`)}
                   >
                     {/* User Info */}
                     <XStack alignItems="center" gap={12}>
@@ -356,14 +359,17 @@ export default function ThreadsScreen() {
                       >
                         <Text fontSize={20}>{comment.isAnonymous ? '👤' : '👨‍🎓'}</Text>
                       </YStack>
-                      <YStack flex={1}>
+                      <XStack flex={1} alignItems="center" gap={6}>
                         <Text fontSize={15} fontWeight="600" color={colors.text} fontFamily="$body">
                           {comment.isAnonymous ? 'Anonymous' : `User ${comment.userId}`}
                         </Text>
                         <Text fontSize={12} color={colors.textSecondary} fontFamily="$body">
+                          •
+                        </Text>
+                        <Text fontSize={12} color={colors.textSecondary} fontFamily="$body">
                           {getTimeAgo(comment.createdAt)}
                         </Text>
-                      </YStack>
+                      </XStack>
                       {/* Three-dot menu for own comments */}
                       {user && comment.userId === user.userId && editingCommentId !== comment.id && (
                         <XStack
@@ -375,164 +381,113 @@ export default function ThreadsScreen() {
                           alignItems="center"
                           pressStyle={{ opacity: 0.7, backgroundColor: colors.backgroundTertiary }}
                           cursor="pointer"
-                          onPress={() => showCommentActions(comment)}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            showCommentActions(comment);
+                          }}
                         >
                           <MoreVertical size={18} color={colors.textSecondary} strokeWidth={2} />
                         </XStack>
                       )}
                     </XStack>
 
-                    {/* Comment Text - Editable or Display */}
-                    {editingCommentId === comment.id ? (
-                      <YStack gap={8}>
-                        <Input
-                          value={editingText}
-                          onChangeText={setEditingText}
-                          backgroundColor={colors.backgroundSecondary}
-                          borderColor={colors.border}
-                          borderWidth={1}
-                          borderRadius={12}
-                          paddingHorizontal={12}
-                          paddingVertical={8}
-                          fontSize={14}
-                          fontFamily="$body"
-                          color={colors.text}
-                          multiline
-                        />
-                        <XStack gap={8}>
-                          <XStack
-                            flex={1}
-                            backgroundColor={colors.primary}
-                            borderRadius={8}
-                            paddingVertical={8}
-                            justifyContent="center"
-                            alignItems="center"
-                            pressStyle={{ opacity: 0.8 }}
-                            cursor="pointer"
-                            onPress={() => handleSaveEdit(comment.id)}
-                          >
-                            <XStack gap={4} alignItems="center">
-                              <Check size={16} color="white" strokeWidth={2.5} />
-                              <Text fontSize={13} fontWeight="600" color="white" fontFamily="$body">
-                                Save
-                              </Text>
-                            </XStack>
-                          </XStack>
-                          <XStack
-                            flex={1}
+                    {/* Comment Content - aligned with name */}
+                    <YStack paddingLeft={52} gap={12}>
+                      {/* Comment Text - Editable or Display */}
+                      {editingCommentId === comment.id ? (
+                        <YStack gap={8}>
+                          <Input
+                            value={editingText}
+                            onChangeText={setEditingText}
                             backgroundColor={colors.backgroundSecondary}
-                            borderRadius={8}
+                            borderColor={colors.border}
+                            borderWidth={1}
+                            borderRadius={12}
+                            paddingHorizontal={12}
                             paddingVertical={8}
-                            justifyContent="center"
-                            alignItems="center"
-                            pressStyle={{ opacity: 0.8 }}
-                            cursor="pointer"
-                            onPress={handleCancelEdit}
-                          >
-                            <XStack gap={4} alignItems="center">
-                              <XIcon size={16} color={colors.text} strokeWidth={2.5} />
-                              <Text fontSize={13} fontWeight="600" color={colors.text} fontFamily="$body">
-                                Cancel
-                              </Text>
-                            </XStack>
-                          </XStack>
-                        </XStack>
-                      </YStack>
-                    ) : (
-                      <Text fontSize={14} color={colors.text} fontFamily="$body" lineHeight={20}>
-                        {comment.text}
-                      </Text>
-                    )}
-
-                    {/* Action Buttons */}
-                    {editingCommentId !== comment.id && (
-                      <XStack gap={24} paddingTop={4}>
-                      {/* Like Button */}
-                      <XStack
-                        alignItems="center"
-                        gap={6}
-                        pressStyle={{ opacity: 0.7 }}
-                        cursor="pointer"
-                      >
-                        <Heart size={18} color={colors.textSecondary} strokeWidth={2} />
-                        <Text fontSize={13} color={colors.textSecondary} fontWeight="500" fontFamily="$body">
-                          {comment.likes}
-                        </Text>
-                      </XStack>
-
-                      {/* Comment/Reply Button */}
-                      <XStack
-                        alignItems="center"
-                        gap={6}
-                        pressStyle={{ opacity: 0.7 }}
-                        cursor="pointer"
-                      >
-                        <MessageCircle size={18} color={colors.textSecondary} strokeWidth={2} />
-                        <Text fontSize={13} color={colors.textSecondary} fontWeight="500" fontFamily="$body">
-                          {comment.replyCount}
-                        </Text>
-                      </XStack>
-                    </XStack>
-                    )}
-                  </YStack>
-
-                  {/* Nested Replies */}
-                  {comment.replies && comment.replies.length > 0 && (
-                    <YStack
-                      backgroundColor={colors.backgroundSecondary}
-                      paddingLeft={44}
-                      borderBottomWidth={1}
-                      borderColor={colors.border}
-                    >
-                      {comment.replies.map((reply) => (
-                        <YStack
-                          key={reply.id}
-                          paddingVertical={16}
-                          paddingRight={24}
-                          gap={8}
-                          borderTopWidth={1}
-                          borderColor={colors.border}
-                        >
-                          {/* Reply User Info */}
-                          <XStack alignItems="center" gap={10}>
-                            <YStack
-                              width={32}
-                              height={32}
-                              borderRadius={16}
-                              backgroundColor={colors.card}
+                            fontSize={14}
+                            fontFamily="$body"
+                            color={colors.text}
+                            multiline
+                          />
+                          <XStack gap={8}>
+                            <XStack
+                              flex={1}
+                              backgroundColor={colors.primary}
+                              borderRadius={8}
+                              paddingVertical={8}
                               justifyContent="center"
                               alignItems="center"
+                              pressStyle={{ opacity: 0.8 }}
+                              cursor="pointer"
+                              onPress={() => handleSaveEdit(comment.id)}
                             >
-                              <Text fontSize={16}>{reply.isAnonymous ? '👤' : '👨‍🎓'}</Text>
-                            </YStack>
-                            <YStack flex={1}>
-                              <Text fontSize={14} fontWeight="600" color={colors.text} fontFamily="$body">
-                                {reply.isAnonymous ? 'Anonymous' : `User ${reply.userId}`}
-                              </Text>
-                              <Text fontSize={11} color={colors.textSecondary} fontFamily="$body">
-                                {getTimeAgo(reply.createdAt)}
-                              </Text>
-                            </YStack>
-                          </XStack>
-
-                          {/* Reply Text */}
-                          <Text fontSize={13} color={colors.text} fontFamily="$body" lineHeight={18}>
-                            {reply.text}
-                          </Text>
-
-                          {/* Reply Action Buttons */}
-                          <XStack gap={20} paddingTop={2}>
-                            <XStack alignItems="center" gap={4}>
-                              <Heart size={16} color={colors.textSecondary} strokeWidth={2} />
-                              <Text fontSize={12} color={colors.textSecondary} fontWeight="500" fontFamily="$body">
-                                {reply.likes}
-                              </Text>
+                              <XStack gap={4} alignItems="center">
+                                <Check size={16} color="white" strokeWidth={2.5} />
+                                <Text fontSize={13} fontWeight="600" color="white" fontFamily="$body">
+                                  Save
+                                </Text>
+                              </XStack>
+                            </XStack>
+                            <XStack
+                              flex={1}
+                              backgroundColor={colors.backgroundSecondary}
+                              borderRadius={8}
+                              paddingVertical={8}
+                              justifyContent="center"
+                              alignItems="center"
+                              pressStyle={{ opacity: 0.8 }}
+                              cursor="pointer"
+                              onPress={handleCancelEdit}
+                            >
+                              <XStack gap={4} alignItems="center">
+                                <XIcon size={16} color={colors.text} strokeWidth={2.5} />
+                                <Text fontSize={13} fontWeight="600" color={colors.text} fontFamily="$body">
+                                  Cancel
+                                </Text>
+                              </XStack>
                             </XStack>
                           </XStack>
                         </YStack>
-                      ))}
+                      ) : (
+                        <Text fontSize={14} color={colors.text} fontFamily="$body" lineHeight={20}>
+                          {comment.text}
+                        </Text>
+                      )}
+
+                      {/* Action Buttons */}
+                      {editingCommentId !== comment.id && (
+                        <XStack gap={24}>
+                          {/* Like Button */}
+                          <XStack
+                            alignItems="center"
+                            gap={6}
+                            pressStyle={{ opacity: 0.7 }}
+                            cursor="pointer"
+                          >
+                            <Heart size={18} color={colors.textSecondary} strokeWidth={2} />
+                            <Text fontSize={13} color={colors.textSecondary} fontWeight="500" fontFamily="$body">
+                              {comment.likes}
+                            </Text>
+                          </XStack>
+
+                          {/* Comment/Reply Button */}
+                          <XStack
+                            alignItems="center"
+                            gap={6}
+                            pressStyle={{ opacity: 0.7 }}
+                            cursor="pointer"
+                            onPress={() => editingCommentId !== comment.id && router.push(`/comment-replies?commentId=${comment.id}&threadId=${activeThreadId}`)}
+                          >
+                            <MessageCircle size={18} color={colors.textSecondary} strokeWidth={2} />
+                            <Text fontSize={13} color={colors.textSecondary} fontWeight="500" fontFamily="$body">
+                              {comment.replyCount === 0 ? 'Reply' : comment.replyCount}
+                            </Text>
+                          </XStack>
+                        </XStack>
+                      )}
                     </YStack>
-                  )}
+                  </YStack>
                 </YStack>
               ))
             )}

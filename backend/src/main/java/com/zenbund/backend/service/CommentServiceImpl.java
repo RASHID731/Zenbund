@@ -108,13 +108,9 @@ public class CommentServiceImpl implements CommentService {
         Comment comment = commentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found with id: " + id));
 
-        // If this is a parent comment, include its replies
-        if (comment.getParentCommentId() == null) {
-            List<Comment> replies = commentRepository.findByParentCommentIdOrderByCreatedAtAsc(comment.getId());
-            return CommentResponse.fromEntityWithReplies(comment, replies);
-        }
-
-        return CommentResponse.fromEntity(comment);
+        // Always include replies (supports nested threading)
+        List<Comment> replies = commentRepository.findByParentCommentIdOrderByCreatedAtAsc(comment.getId());
+        return CommentResponse.fromEntityWithReplies(comment, replies);
     }
 
     @Override

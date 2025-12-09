@@ -2,7 +2,7 @@ package com.zenbund.backend.dto.response;
 
 import com.zenbund.backend.entity.Comment;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -17,8 +17,8 @@ public class CommentResponse {
     private Boolean isAnonymous;
     private Integer likes;
     private Integer replyCount;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Instant createdAt;
+    private Instant updatedAt;
     private List<CommentResponse> replies;
 
     // No-argument constructor
@@ -29,7 +29,7 @@ public class CommentResponse {
     // Constructor
     public CommentResponse(Long id, Long threadId, Long userId, Long parentCommentId,
                           String text, Boolean isAnonymous, Integer likes, Integer replyCount,
-                          LocalDateTime createdAt, LocalDateTime updatedAt) {
+                          Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.threadId = threadId;
         this.userId = userId;
@@ -137,19 +137,19 @@ public class CommentResponse {
         this.replyCount = replyCount;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(LocalDateTime updatedAt) {
+    public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
     }
 
