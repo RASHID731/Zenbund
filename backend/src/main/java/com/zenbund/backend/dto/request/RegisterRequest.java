@@ -23,28 +23,15 @@ public class RegisterRequest {
     @Size(max = 100, message = "Name must not exceed 100 characters")
     private String name;
 
-    @NotBlank(message = "University is required")
-    @Size(max = 100, message = "University must not exceed 100 characters")
-    private String university;
-
-    @NotBlank(message = "Major is required")
-    @Size(max = 100, message = "Major must not exceed 100 characters")
-    private String major;
-
-    @Size(max = 20, message = "Year must not exceed 20 characters")
-    private String year;
-
     // No-argument constructor
     public RegisterRequest() {
     }
 
     // Constructor with all required fields
-    public RegisterRequest(String email, String password, String name, String university, String major) {
+    public RegisterRequest(String email, String password, String name) {
         this.email = email;
         this.password = password;
         this.name = name;
-        this.university = university;
-        this.major = major;
     }
 
     // Getters and Setters
@@ -72,38 +59,11 @@ public class RegisterRequest {
         this.name = name;
     }
 
-    public String getUniversity() {
-        return university;
-    }
-
-    public void setUniversity(String university) {
-        this.university = university;
-    }
-
-    public String getMajor() {
-        return major;
-    }
-
-    public void setMajor(String major) {
-        this.major = major;
-    }
-
-    public String getYear() {
-        return year;
-    }
-
-    public void setYear(String year) {
-        this.year = year;
-    }
-
     @Override
     public String toString() {
         return "RegisterRequest{" +
                 "email='" + email + '\'' +
                 ", name='" + name + '\'' +
-                ", university='" + university + '\'' +
-                ", major='" + major + '\'' +
-                ", year='" + year + '\'' +
                 '}';
         // Note: Don't include password in toString() for security
     }

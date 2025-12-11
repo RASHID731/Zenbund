@@ -31,18 +31,18 @@ public class AuthController {
      * Register a new user account.
      *
      * Endpoint: POST /api/auth/register
-     * Request Body: RegisterRequest (email, password, name, university, major, year?)
+     * Request Body: RegisterRequest (email, password, name)
      * Response: AuthResponse with JWT token and user info
      * Status: 201 CREATED on success
+     *
+     * Note: University, major, year, and other profile fields can be set later
+     * through the PUT /api/users/profile endpoint.
      *
      * Example request:
      * {
      *   "email": "student@uni-rostock.de",
      *   "password": "SecurePass123",
-     *   "name": "Alex Johnson",
-     *   "university": "University of Rostock",
-     *   "major": "Computer Science",
-     *   "year": "3rd Year"
+     *   "name": "Alex Johnson"
      * }
      *
      * Example response:
@@ -52,8 +52,12 @@ public class AuthController {
      *   "userId": 1,
      *   "email": "student@uni-rostock.de",
      *   "name": "Alex Johnson",
-     *   "university": "University of Rostock",
-     *   "major": "Computer Science"
+     *   "university": null,
+     *   "major": null,
+     *   "year": null,
+     *   "bio": null,
+     *   "profilePicture": null,
+     *   "instagramLink": null
      * }
      */
     @PostMapping("/register")
@@ -85,8 +89,12 @@ public class AuthController {
      *   "userId": 1,
      *   "email": "student@uni-rostock.de",
      *   "name": "Alex Johnson",
-     *   "university": "University of Rostock",
-     *   "major": "Computer Science"
+     *   "university": null,
+     *   "major": null,
+     *   "year": null,
+     *   "bio": null,
+     *   "profilePicture": null,
+     *   "instagramLink": null
      * }
      *
      * Error responses:

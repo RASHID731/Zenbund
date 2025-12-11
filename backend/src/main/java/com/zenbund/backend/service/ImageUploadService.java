@@ -50,11 +50,26 @@ public class ImageUploadService {
 
         for (MultipartFile file : files) {
             validateFile(file);
-            String url = uploadToCloudinary(file);
+            String url = uploadToCloudinary(file, "zenbund/offers");
             imageUrls.add(url);
         }
 
         return imageUrls;
+    }
+
+    /**
+     * Upload a single profile picture to Cloudinary
+     *
+     * @param file profile picture file
+     * @return image URL
+     */
+    public String uploadProfilePicture(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new InvalidFileException("No file provided");
+        }
+
+        validateFile(file);
+        return uploadToCloudinary(file, "zenbund/profile-pictures");
     }
 
     /**
@@ -85,14 +100,18 @@ public class ImageUploadService {
 
     /**
      * Upload file to Cloudinary
+     *
+     * @param file image file to upload
+     * @param folder Cloudinary folder path
+     * @return secure URL of uploaded image
      */
     @SuppressWarnings("unchecked")
-    private String uploadToCloudinary(MultipartFile file) {
+    private String uploadToCloudinary(MultipartFile file, String folder) {
         try {
             Map<String, Object> uploadResult = cloudinary.uploader().upload(
                     file.getBytes(),
                     ObjectUtils.asMap(
-                            "folder", "zenbund/offers",
+                            "folder", folder,
                             "resource_type", "image",
                             "quality", "auto",
                             "fetch_format", "auto"

@@ -19,9 +19,6 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [university, setUniversity] = useState('');
-  const [major, setMajor] = useState('');
-  const [year, setYear] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -39,8 +36,6 @@ export default function RegisterScreen() {
       email,
       password,
       confirmPassword,
-      university,
-      major,
     });
 
     if (!validation.isValid) {
@@ -56,9 +51,6 @@ export default function RegisterScreen() {
         name,
         email,
         password,
-        university,
-        major,
-        year: year.trim() || undefined,
       });
 
       if (result.success) {
@@ -236,104 +228,6 @@ export default function RegisterScreen() {
                     secureTextEntry
                     autoCapitalize="none"
                     autoComplete="password-new"
-                  />
-                </XStack>
-              </YStack>
-
-              {/* University Input */}
-              <YStack gap={8}>
-                <Text fontSize={15} fontWeight="600" color={colors.text} fontFamily="$body">
-                  University
-                </Text>
-                <XStack
-                  backgroundColor={colors.backgroundSecondary}
-                  borderRadius={20}
-                  paddingHorizontal={16}
-                  alignItems="center"
-                  borderColor={colors.border}
-                  borderWidth={1}
-                  gap={8}
-                >
-                  <User size={20} color={colors.icon} strokeWidth={2.5} />
-                  <Input
-                    flex={1}
-                    placeholder="University of Rostock"
-                    placeholderTextColor={colors.textTertiary}
-                    value={university}
-                    onChangeText={setUniversity}
-                    borderWidth={0}
-                    backgroundColor="transparent"
-                    paddingHorizontal={0}
-                    paddingVertical={0}
-                    fontSize={16}
-                    fontFamily="$body"
-                    color={colors.text}
-                    autoCapitalize="words"
-                  />
-                </XStack>
-              </YStack>
-
-              {/* Major Input */}
-              <YStack gap={8}>
-                <Text fontSize={15} fontWeight="600" color={colors.text} fontFamily="$body">
-                  Major
-                </Text>
-                <XStack
-                  backgroundColor={colors.backgroundSecondary}
-                  borderRadius={20}
-                  paddingHorizontal={16}
-                  alignItems="center"
-                  borderColor={colors.border}
-                  borderWidth={1}
-                  gap={8}
-                >
-                  <User size={20} color={colors.icon} strokeWidth={2.5} />
-                  <Input
-                    flex={1}
-                    placeholder="Computer Science"
-                    placeholderTextColor={colors.textTertiary}
-                    value={major}
-                    onChangeText={setMajor}
-                    borderWidth={0}
-                    backgroundColor="transparent"
-                    paddingHorizontal={0}
-                    paddingVertical={0}
-                    fontSize={16}
-                    fontFamily="$body"
-                    color={colors.text}
-                    autoCapitalize="words"
-                  />
-                </XStack>
-              </YStack>
-
-              {/* Year Input (Optional) */}
-              <YStack gap={8}>
-                <Text fontSize={15} fontWeight="600" color={colors.text} fontFamily="$body">
-                  Year (Optional)
-                </Text>
-                <XStack
-                  backgroundColor={colors.backgroundSecondary}
-                  borderRadius={20}
-                  paddingHorizontal={16}
-                  alignItems="center"
-                  borderColor={colors.border}
-                  borderWidth={1}
-                  gap={8}
-                >
-                  <User size={20} color={colors.icon} strokeWidth={2.5} />
-                  <Input
-                    flex={1}
-                    placeholder="3rd Year"
-                    placeholderTextColor={colors.textTertiary}
-                    value={year}
-                    onChangeText={setYear}
-                    borderWidth={0}
-                    backgroundColor="transparent"
-                    paddingHorizontal={0}
-                    paddingVertical={0}
-                    fontSize={16}
-                    fontFamily="$body"
-                    color={colors.text}
                   />
                 </XStack>
               </YStack>

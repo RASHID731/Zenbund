@@ -1,24 +1,26 @@
-import { Text, YStack, XStack, ScrollView } from 'tamagui';
+import { Text, YStack, XStack, ScrollView, Image as TamaguiImage, Input } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Navbar } from '@/components/navbar';
-import { Edit3, GraduationCap, BookOpen, Instagram } from 'lucide-react-native';
+import { Edit3, GraduationCap, BookOpen, Instagram, User as UserIcon, Check, X as XIcon, Pencil, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api';
-import { Image } from 'react-native';
+import { Image, Linking, Alert } from 'react-native';
 import { Offer } from '@/types';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
 
   const [userListings, setUserListings] = useState<Offer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEditingInstagram, setIsEditingInstagram] = useState(false);
+  const [instagramInput, setInstagramInput] = useState('');
 
   // Fetch user's listings from API
   useEffect(() => {
@@ -94,6 +96,81 @@ export default function ProfileScreen() {
   // Determine which listings to display
   const displayListings = userListings.length > 0 ? userListings : myListings;
 
+  // Handle Instagram link save
+  async function handleSaveInstagram() {
+    if (!instagramInput.trim()) {
+      Alert.alert('Error', 'Please enter an Instagram username or link');
+      return;
+    }
+
+    try {
+      const response = await apiClient.put('/users/profile', {
+        instagramLink: instagramInput.trim(),
+      });
+
+      if (response.success && response.data) {
+        await updateProfile(response.data as any);
+        setIsEditingInstagram(false);
+        setInstagramInput('');
+      } else {
+        Alert.alert('Error', 'Failed to update Instagram link');
+      }
+    } catch (error) {
+      console.error('Error updating Instagram:', error);
+      Alert.alert('Error', 'Failed to update Instagram link');
+    }
+  }
+
+  // Handle cancel editing Instagram
+  function handleCancelInstagram() {
+    setIsEditingInstagram(false);
+    setInstagramInput('');
+  }
+
+  // Handle delete Instagram link
+  async function handleDeleteInstagram() {
+    Alert.alert(
+      'Remove Instagram Link',
+      'Are you sure you want to remove your Instagram link?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await apiClient.put('/users/profile', {
+                instagramLink: '',
+              });
+
+              if (response.success && response.data) {
+                await updateProfile(response.data as any);
+                setIsEditingInstagram(false);
+                setInstagramInput('');
+              } else {
+                Alert.alert('Error', 'Failed to remove Instagram link');
+              }
+            } catch (error) {
+              console.error('Error removing Instagram:', error);
+              Alert.alert('Error', 'Failed to remove Instagram link');
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  // Handle start editing Instagram
+  function handleStartEditInstagram() {
+    if (user?.instagramLink) {
+      setInstagramInput(user.instagramLink);
+    }
+    setIsEditingInstagram(true);
+  }
+
   // Render a single listing item
   const renderListingItem = (listing: any, index: number) => (
     <YStack
@@ -145,8 +222,18 @@ export default function ProfileScreen() {
                 alignItems="center"
                 borderWidth={3}
                 borderColor={colors.primary}
+                overflow="hidden"
               >
-                <Text fontSize={32}>👤</Text>
+                {user?.profilePicture ? (
+                  <TamaguiImage
+                    source={{ uri: user.profilePicture }}
+                    width={84}
+                    height={84}
+                    borderRadius={84}
+                  />
+                ) : (
+                  <UserIcon size={40} color={colors.primary} strokeWidth={2} />
+                )}
               </YStack>
 
               <YStack flex={1} paddingTop={12}>
@@ -206,35 +293,40 @@ export default function ProfileScreen() {
               paddingHorizontal={6}
             >
               <YStack gap={12}>
-                <XStack alignItems="center" gap={12}>
-                  <YStack
-                    justifyContent="center"
-                    alignItems="center"
-                  >
-                    <GraduationCap size={20} color={colorScheme === 'light' ? '#1976D2' : '#64B5F6'} strokeWidth={2.5} />
-                  </YStack>
-                  <YStack flex={1}>
-                    <Text fontSize={15} color={colors.textTertiary} fontWeight="600" fontFamily="$body">
-                      {user?.university || 'University'}
-                    </Text>
-                  </YStack>
-                </XStack>
+                {user?.university && (
+                  <XStack alignItems="center" gap={12}>
+                    <YStack
+                      justifyContent="center"
+                      alignItems="center"
+                    >
+                      <GraduationCap size={20} color={colorScheme === 'light' ? '#1976D2' : '#64B5F6'} strokeWidth={2.5} />
+                    </YStack>
+                    <YStack flex={1}>
+                      <Text fontSize={15} color={colors.textTertiary} fontWeight="600" fontFamily="$body">
+                        {user.university}
+                      </Text>
+                    </YStack>
+                  </XStack>
+                )}
 
-                <XStack alignItems="center" gap={12}>
-                  <YStack
-                    justifyContent="center"
-                    alignItems="center"
-                  >
-                    <BookOpen size={20} color={colorScheme === 'light' ? '#F57C00' : '#FFB74D'} strokeWidth={2.5} />
-                  </YStack>
-                  <YStack flex={1}>
-                    <Text fontSize={15} color={colors.textTertiary} fontWeight="600" fontFamily="$body">
-                      {user?.major || 'Major'}{user?.year ? ` • ${user.year}` : ''}
-                    </Text>
-                  </YStack>
-                </XStack>
+                {user?.major && (
+                  <XStack alignItems="center" gap={12}>
+                    <YStack
+                      justifyContent="center"
+                      alignItems="center"
+                    >
+                      <BookOpen size={20} color={colorScheme === 'light' ? '#F57C00' : '#FFB74D'} strokeWidth={2.5} />
+                    </YStack>
+                    <YStack flex={1}>
+                      <Text fontSize={15} color={colors.textTertiary} fontWeight="600" fontFamily="$body">
+                        {user.major}{user?.year ? ` • ${user.year}` : ''}
+                      </Text>
+                    </YStack>
+                  </XStack>
+                )}
 
-                {user?.instagramLink && (
+                {/* Instagram Link */}
+                {isEditingInstagram ? (
                   <XStack alignItems="center" gap={12}>
                     <YStack
                       justifyContent="center"
@@ -242,12 +334,140 @@ export default function ProfileScreen() {
                     >
                       <Instagram size={20} color="#E4405F" strokeWidth={2.5} />
                     </YStack>
-                    <YStack flex={1}>
-                      <Text fontSize={15} color="#E4405F" fontWeight="600" fontFamily="$body">
-                        {user.instagramLink}
-                      </Text>
-                    </YStack>
+                    <Input
+                      flex={1}
+                      placeholder="@username or profile link"
+                      placeholderTextColor={colors.textTertiary}
+                      value={instagramInput}
+                      onChangeText={setInstagramInput}
+                      backgroundColor={colors.backgroundSecondary}
+                      borderWidth={1}
+                      borderColor={colors.border}
+                      borderRadius={12}
+                      paddingHorizontal={12}
+                      paddingVertical={8}
+                      fontSize={15}
+                      fontFamily="$body"
+                      color={colors.text}
+                      autoFocus
+                    />
+                    <XStack gap={8}>
+                      <YStack
+                        width={32}
+                        height={32}
+                        backgroundColor={colors.primary}
+                        borderRadius={16}
+                        justifyContent="center"
+                        alignItems="center"
+                        pressStyle={{ opacity: 0.7, scale: 0.95 }}
+                        cursor="pointer"
+                        onPress={handleSaveInstagram}
+                      >
+                        <Check size={16} color="white" strokeWidth={3} />
+                      </YStack>
+                      {user?.instagramLink && (
+                        <YStack
+                          width={32}
+                          height={32}
+                          backgroundColor="#fee2e2"
+                          borderRadius={16}
+                          justifyContent="center"
+                          alignItems="center"
+                          pressStyle={{ opacity: 0.7, scale: 0.95 }}
+                          cursor="pointer"
+                          onPress={handleDeleteInstagram}
+                        >
+                          <Trash2 size={16} color="#dc2626" strokeWidth={2.5} />
+                        </YStack>
+                      )}
+                      <YStack
+                        width={32}
+                        height={32}
+                        backgroundColor={colors.backgroundSecondary}
+                        borderRadius={16}
+                        justifyContent="center"
+                        alignItems="center"
+                        pressStyle={{ opacity: 0.7, scale: 0.95 }}
+                        cursor="pointer"
+                        onPress={handleCancelInstagram}
+                      >
+                        <XIcon size={16} color={colors.textSecondary} strokeWidth={3} />
+                      </YStack>
+                    </XStack>
                   </XStack>
+                ) : (
+                  <XStack alignItems="center" gap={12}>
+                    <YStack
+                      justifyContent="center"
+                      alignItems="center"
+                    >
+                      <Instagram size={20} color="#E4405F" strokeWidth={2.5} />
+                    </YStack>
+                    {user?.instagramLink ? (
+                      <XStack alignItems="center" gap={8}>
+                        <YStack
+                          pressStyle={{ opacity: 0.7 }}
+                          cursor="pointer"
+                          onPress={() => {
+                            const instagram = user?.instagramLink;
+                            if (!instagram) return;
+                            
+                            const url = instagram.startsWith('http')
+                              ? instagram
+                              : `https://instagram.com/${instagram.replace('@', '')}`;
+                            Linking.openURL(url);
+                          }}
+                        >
+                          <Text
+                            fontSize={15}
+                            color="#E4405F"
+                            fontWeight="600"
+                            fontFamily="$body"
+                          >
+                            {user.instagramLink}
+                          </Text>
+                        </YStack>
+                        <YStack
+                          width={28}
+                          height={28}
+                          backgroundColor={colors.backgroundSecondary}
+                          borderRadius={14}
+                          justifyContent="center"
+                          alignItems="center"
+                          pressStyle={{ opacity: 0.7, scale: 0.95 }}
+                          cursor="pointer"
+                          onPress={handleStartEditInstagram}
+                        >
+                          <Pencil size={14} color={colors.textSecondary} strokeWidth={2.5} />
+                        </YStack>
+                      </XStack>
+                    ) : (
+                      <YStack
+                        flex={1}
+                        pressStyle={{ opacity: 0.7 }}
+                        cursor="pointer"
+                        onPress={() => setIsEditingInstagram(true)}
+                      >
+                        <Text
+                          fontSize={15}
+                          color={colors.textTertiary}
+                          fontWeight="600"
+                          fontFamily="$body"
+                        >
+                          Add an Instagram link
+                        </Text>
+                      </YStack>
+                    )}
+                  </XStack>
+                )}
+
+                {/* Bio Section */}
+                {user?.bio && (
+                  <YStack paddingTop={4}>
+                    <Text fontSize={15} color={colors.text} fontFamily="$body" lineHeight={22}>
+                      {user.bio}
+                    </Text>
+                  </YStack>
                 )}
               </YStack>
             </YStack>

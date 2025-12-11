@@ -2,7 +2,9 @@ package com.zenbund.backend.service;
 
 import com.zenbund.backend.dto.request.LoginRequest;
 import com.zenbund.backend.dto.request.RegisterRequest;
+import com.zenbund.backend.dto.request.UpdateProfileRequest;
 import com.zenbund.backend.dto.response.AuthResponse;
+import com.zenbund.backend.dto.response.UpdateProfileResponse;
 import com.zenbund.backend.entity.User;
 import com.zenbund.backend.repository.UserRepository;
 import com.zenbund.backend.security.JwtUtil;
@@ -66,19 +68,12 @@ public class UserServiceImpl implements UserService {
         // The result is a 60-character string like: $2a$12$R9h/cIPz0gi.URNNX3kh2O...
         String hashedPassword = passwordEncoder.encode(request.getPassword());
 
-        // Step 3: Create new User entity
+        // Step 3: Create new User entity with basic required fields only
         User user = new User(
                 request.getEmail(),
                 hashedPassword,
-                request.getName(),
-                request.getUniversity(),
-                request.getMajor()
+                request.getName()
         );
-
-        // Set optional field if provided
-        if (request.getYear() != null && !request.getYear().isEmpty()) {
-            user.setYear(request.getYear());
-        }
 
         // Phase 1: Auto-verify users (no email verification yet)
         // In Phase 2, this will be false and require email confirmation
@@ -184,5 +179,55 @@ public class UserServiceImpl implements UserService {
         // findByEmail() returns our User entity, which implements UserDetails
         // Spring Security uses this to check password and account status
         return findByEmail(email);
+    }
+
+    /**
+     * Update user profile information.
+     * Only updates fields that are provided (non-null).
+     */
+    @Override
+    public UpdateProfileResponse updateProfile(String email, UpdateProfileRequest request) {
+        // Find the user
+        User user = findByEmail(email);
+
+        // Update only non-null fields
+        if (request.getName() != null) {
+            user.setName(request.getName());
+        }
+        if (request.getBio() != null) {
+            user.setBio(request.getBio());
+        }
+        if (request.getProfilePicture() != null) {
+            user.setProfilePicture(request.getProfilePicture());
+        }
+        if (request.getUniversity() != null) {
+            user.setUniversity(request.getUniversity());
+        }
+        if (request.getMajor() != null) {
+            user.setMajor(request.getMajor());
+        }
+        if (request.getYear() != null) {
+            user.setYear(request.getYear());
+        }
+        if (request.getInstagramLink() != null) {
+            user.setInstagramLink(request.getInstagramLink());
+        }
+
+        // Save updated user
+        // JPA automatically updates the updatedAt field via @PreUpdate
+        User updatedUser = userRepository.save(user);
+
+        // Return response with updated user info
+        return new UpdateProfileResponse(
+                updatedUser.getId(),
+                updatedUser.getEmail(),
+                updatedUser.getName(),
+                updatedUser.getBio(),
+                updatedUser.getProfilePicture(),
+                updatedUser.getUniversity(),
+                updatedUser.getMajor(),
+                updatedUser.getYear(),
+                updatedUser.getInstagramLink()
+        );
     }
 }

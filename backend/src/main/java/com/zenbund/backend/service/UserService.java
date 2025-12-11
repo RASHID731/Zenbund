@@ -2,7 +2,9 @@ package com.zenbund.backend.service;
 
 import com.zenbund.backend.dto.request.LoginRequest;
 import com.zenbund.backend.dto.request.RegisterRequest;
+import com.zenbund.backend.dto.request.UpdateProfileRequest;
 import com.zenbund.backend.dto.response.AuthResponse;
+import com.zenbund.backend.dto.response.UpdateProfileResponse;
 import com.zenbund.backend.entity.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 
@@ -43,4 +45,15 @@ public interface UserService extends UserDetailsService {
      * @throws com.zenbund.backend.exception.ResourceNotFoundException if user not found
      */
     User findByEmail(String email);
+
+    /**
+     * Update user profile information.
+     * Updates only the fields provided in the request (non-null values).
+     *
+     * @param email User's email address
+     * @param request Profile update data
+     * @return Updated profile response with new user info
+     * @throws com.zenbund.backend.exception.ResourceNotFoundException if user not found
+     */
+    UpdateProfileResponse updateProfile(String email, UpdateProfileRequest request);
 }

@@ -8,8 +8,8 @@ export interface User {
   userId: number;
   email: string;
   name: string;
-  university: string;
-  major: string;
+  university?: string;
+  major?: string;
   year?: string;
   instagramLink?: string;
   bio?: string;
@@ -25,8 +25,8 @@ interface AuthResponse {
   userId: number;
   email: string;
   name: string;
-  university: string;
-  major: string;
+  university?: string;
+  major?: string;
   year?: string;
   instagramLink?: string;
   bio?: string;
@@ -48,9 +48,6 @@ interface RegisterRequest {
   email: string;
   password: string;
   name: string;
-  university: string;
-  major: string;
-  year?: string;
 }
 
 /**
@@ -64,6 +61,7 @@ interface AuthContextValue {
   register: (data: RegisterRequest) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  updateProfile: (updatedUserData: Partial<User>) => Promise<void>;
 }
 
 // Create context with undefined default value
@@ -229,6 +227,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  /**
+   * Update user profile data in context.
+   * Called after profile is successfully updated on backend.
+   */
+  const updateProfile = async (updatedUserData: Partial<User>) => {
+    if (user) {
+      // Merge updated data with existing user data
+      setUser({
+        ...user,
+        ...updatedUserData,
+      });
+    }
+  };
+
   const value: AuthContextValue = {
     user,
     isAuthenticated: user !== null,
@@ -237,6 +249,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     register,
     logout,
     checkAuth,
+    updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

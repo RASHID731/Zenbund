@@ -142,8 +142,6 @@ export function validateRegisterForm(data: {
   email: string;
   password: string;
   confirmPassword: string;
-  university: string;
-  major: string;
 }): ValidationResult {
   // Validate name
   const nameResult = validateRequired(data.name, 'Name');
@@ -167,18 +165,6 @@ export function validateRegisterForm(data: {
   const matchResult = validatePasswordMatch(data.password, data.confirmPassword);
   if (!matchResult.isValid) {
     return matchResult;
-  }
-
-  // Validate university
-  const universityResult = validateRequired(data.university, 'University');
-  if (!universityResult.isValid) {
-    return universityResult;
-  }
-
-  // Validate major
-  const majorResult = validateRequired(data.major, 'Major');
-  if (!majorResult.isValid) {
-    return majorResult;
   }
 
   return { isValid: true };

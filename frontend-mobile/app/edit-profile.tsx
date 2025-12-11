@@ -1,40 +1,170 @@
-import { Text, YStack, XStack, ScrollView, Input } from 'tamagui';
+import { Text, YStack, XStack, ScrollView, Input, Image } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
-import { X, User, GraduationCap, BookOpen, MessageSquare, Calendar } from 'lucide-react-native';
+import { useState, useEffect } from 'react';
+import { X, User, GraduationCap, BookOpen, MessageSquare, Calendar, Camera } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { Alert } from 'react-native';
+import { Alert, ActivityIndicator } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
 
 export default function EditProfileScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
+  const { user, updateProfile } = useAuth();
 
-  // State for form fields
-  const [emoji, setEmoji] = useState('👤');
-  const [name, setName] = useState('Alex Johnson');
-  const [bio, setBio] = useState('');
-  const [university, setUniversity] = useState('University of Rostock');
-  const [major, setMajor] = useState('Computer Science');
-  const [year, setYear] = useState('3rd Year');
+  // State for form fields - initialize with user data
+  const [profilePictureUri, setProfilePictureUri] = useState<string | null>(user?.profilePicture || null);
+  const [name, setName] = useState(user?.name || '');
+  const [bio, setBio] = useState(user?.bio || '');
+  const [university, setUniversity] = useState(user?.university || '');
+  const [major, setMajor] = useState(user?.major || '');
+  const [year, setYear] = useState(user?.year || '');
+
+  // Loading states
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Track if user has made changes
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Handle save
-  function handleSave() {
-    // TODO: Implement API call to save profile
-    Alert.alert('Success', 'Profile updated successfully!', [
-      {
-        text: 'OK',
-        onPress: () => router.back(),
-      },
-    ]);
+  // Update form when user data loads
+  useEffect(() => {
+    if (user) {
+      setProfilePictureUri(user.profilePicture || null);
+      setName(user.name || '');
+      setBio(user.bio || '');
+      setUniversity(user.university || '');
+      setMajor(user.major || '');
+      setYear(user.year || '');
+    }
+  }, [user]);
+
+  /**
+   * Compress image to reduce file size before upload
+   */
+  async function compressImage(uri: string): Promise<string> {
+    try {
+      const manipResult = await manipulateAsync(
+        uri,
+        [{ resize: { width: 800 } }], // Resize to max 800px width
+        { compress: 0.7, format: SaveFormat.JPEG }
+      );
+      return manipResult.uri;
+    } catch (error) {
+      console.error('Error compressing image:', error);
+      return uri; // Return original if compression fails
+    }
   }
 
-  // Handle back with unsaved changes check
+  /**
+   * Handle profile picture selection
+   */
+  async function handleSelectProfilePicture() {
+    // Request permission
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'We need camera roll permissions to select a photo');
+      return;
+    }
+
+    // Launch image picker
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: 'images' as any,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets && result.assets[0]) {
+      const imageUri = result.assets[0].uri;
+
+      // Show loading and upload immediately
+      setIsUploading(true);
+
+      try {
+        // Compress image
+        const compressedUri = await compressImage(imageUri);
+
+        // Upload to backend
+        const filename = compressedUri.split('/').pop() || 'profile.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+        const formData = new FormData();
+        formData.append('image', {
+          uri: compressedUri,
+          name: filename,
+          type,
+        } as any);
+
+        const response = await apiClient.postFormData('/users/profile-picture', formData);
+
+        if (response.success && response.data) {
+          // Update local state with the Cloudinary URL
+          setProfilePictureUri((response.data as any).url);
+          setHasChanges(true);
+          Alert.alert('Success', 'Profile picture uploaded! Remember to save changes.');
+        } else {
+          Alert.alert('Error', 'Failed to upload profile picture');
+        }
+      } catch (error) {
+        console.error('Upload error:', error);
+        Alert.alert('Error', 'Failed to upload profile picture. Please try again.');
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  }
+
+  /**
+   * Handle save profile
+   */
+  async function handleSave() {
+    setIsSaving(true);
+
+    try {
+      // Prepare request body (only send non-empty values)
+      const requestBody: any = {};
+
+      if (name.trim()) requestBody.name = name.trim();
+      if (bio.trim()) requestBody.bio = bio.trim();
+      if (profilePictureUri) requestBody.profilePicture = profilePictureUri;
+      if (university.trim()) requestBody.university = university.trim();
+      if (major.trim()) requestBody.major = major.trim();
+      if (year.trim()) requestBody.year = year.trim();
+
+      // Call API to update profile
+      const response = await apiClient.put('/users/profile', requestBody);
+
+      if (response.success && response.data) {
+        // Update user context with new data
+        await updateProfile(response.data as any);
+
+        Alert.alert('Success', 'Profile updated successfully!', [
+          {
+            text: 'OK',
+            onPress: () => router.back(),
+          },
+        ]);
+      } else {
+        Alert.alert('Error', response.message || 'Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      Alert.alert('Error', 'Failed to update profile. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  /**
+   * Handle back with unsaved changes check
+   */
   function handleBack() {
     if (hasChanges) {
       Alert.alert(
@@ -57,7 +187,9 @@ export default function EditProfileScreen() {
     }
   }
 
-  // Track changes
+  /**
+   * Track changes
+   */
   function handleChange(setter: (value: string) => void, value: string) {
     setter(value);
     setHasChanges(true);
@@ -112,11 +244,24 @@ export default function EditProfileScreen() {
                 borderColor={colors.primary}
                 pressStyle={{ scale: 0.95 }}
                 cursor="pointer"
+                onPress={isUploading ? undefined : handleSelectProfilePicture}
+                opacity={isUploading ? 0.6 : 1}
               >
-                <Text fontSize={48}>{emoji}</Text>
+                {isUploading ? (
+                  <ActivityIndicator color={colors.primary} size="large" />
+                ) : profilePictureUri ? (
+                  <Image
+                    source={{ uri: profilePictureUri }}
+                    width={94}
+                    height={94}
+                    borderRadius={94}
+                  />
+                ) : (
+                  <Camera size={40} color={colors.primary} strokeWidth={2} />
+                )}
               </YStack>
               <Text fontSize={14} color={colors.textSecondary} fontFamily="$body">
-                Tap to change profile picture
+                {isUploading ? 'Uploading...' : 'Tap to change profile picture'}
               </Text>
             </YStack>
 
@@ -294,19 +439,23 @@ export default function EditProfileScreen() {
 
             {/* Save Button */}
             <XStack
-              backgroundColor={colors.primary}
+              backgroundColor={isSaving ? colors.textTertiary : colors.primary}
               borderRadius={12}
               paddingVertical={16}
               justifyContent="center"
               alignItems="center"
               marginTop={8}
-              pressStyle={{ opacity: 0.8, scale: 0.98 }}
-              cursor="pointer"
-              onPress={handleSave}
+              pressStyle={isSaving ? {} : { opacity: 0.8, scale: 0.98 }}
+              cursor={isSaving ? 'not-allowed' : 'pointer'}
+              onPress={isSaving ? undefined : handleSave}
             >
-              <Text fontSize={17} fontWeight="700" color="white" fontFamily="$body">
-                Save Changes
-              </Text>
+              {isSaving ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text fontSize={17} fontWeight="700" color="white" fontFamily="$body">
+                  Save Changes
+                </Text>
+              )}
             </XStack>
           </YStack>
         </ScrollView>

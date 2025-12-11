@@ -45,14 +45,12 @@ public class User implements UserDetails {
     @Column(length = 255)
     private String profilePicture;
 
-    @NotBlank(message = "University is required")
     @Size(max = 100, message = "University name must not exceed 100 characters")
-    @Column(nullable = false, length = 100)
+    @Column(length = 100)
     private String university;
 
-    @NotBlank(message = "Major is required")
     @Size(max = 100, message = "Major must not exceed 100 characters")
-    @Column(nullable = false, length = 100)
+    @Column(length = 100)
     private String major;
 
     @Size(max = 20, message = "Year must not exceed 20 characters")
@@ -77,12 +75,10 @@ public class User implements UserDetails {
     }
 
     // Constructor for registration (without relationships)
-    public User(String email, String passwordHash, String name, String university, String major) {
+    public User(String email, String passwordHash, String name) {
         this.email = email;
         this.passwordHash = passwordHash;
         this.name = name;
-        this.university = university;
-        this.major = major;
         this.isVerified = false;
     }
 
