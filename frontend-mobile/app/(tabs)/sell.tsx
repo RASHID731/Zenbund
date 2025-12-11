@@ -10,6 +10,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { apiClient } from '@/lib/api';
 import { CATEGORY_NAME_TO_ID } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SelectedImage {
   uri: string;
@@ -17,10 +18,11 @@ interface SelectedImage {
   height: number;
 }
 
-export default function SellModal() {
+export default function SellTab() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
+  const { user } = useAuth();
 
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
@@ -73,7 +75,7 @@ export default function SellModal() {
 
     if (!result.canceled && result.assets) {
       const newImages = result.assets.slice(0, 10 - images.length);
-      
+
       // Validate image sizes
       for (const asset of newImages) {
         // Approximate size check (5MB = 5 * 1024 * 1024 bytes)
@@ -149,6 +151,12 @@ export default function SellModal() {
 
   // Handle form submission
   async function handlePublish() {
+    // Check if user is authenticated
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to create a listing');
+      return;
+    }
+
     // Validate required fields
     if (!validateForm()) {
       return;
@@ -181,8 +189,8 @@ export default function SellModal() {
 
       // Add offer data
       const categoryId = CATEGORY_NAME_TO_ID[category] || 6; // Default to "Other"
-      
-      formData.append('userId', '1'); // Temporary hardcoded userId
+
+      formData.append('userId', user.userId.toString());
       formData.append('title', title);
       formData.append('price', price);
       formData.append('categoryId', categoryId.toString());
@@ -196,7 +204,17 @@ export default function SellModal() {
         Alert.alert('Success', 'Your listing has been published!', [
           {
             text: 'OK',
-            onPress: () => router.back(),
+            onPress: () => {
+              // Clear form
+              setTitle('');
+              setPrice('');
+              setCategory('');
+              setLocation('');
+              setDescription('');
+              setImages([]);
+              // Navigate to home tab
+              router.push('/(tabs)');
+            },
           },
         ]);
       } else {
@@ -222,42 +240,7 @@ export default function SellModal() {
           borderBottomWidth={1}
           borderBottomColor={colors.border}
         >
-          <XStack
-            width={40}
-            height={40}
-            borderRadius={20}
-            backgroundColor={colors.backgroundSecondary}
-            justifyContent="center"
-            alignItems="center"
-            pressStyle={{ backgroundColor: colors.backgroundTertiary, scale: 0.95 }}
-            onPress={() => {
-              // Check if user has entered any data
-              const hasData = title || price || category || location || description || images.length > 0;
-
-              if (hasData) {
-                Alert.alert(
-                  'Discard Changes?',
-                  'You have unsaved changes. Are you sure you want to go back?',
-                  [
-                    {
-                      text: 'Cancel',
-                      style: 'cancel',
-                    },
-                    {
-                      text: 'Discard',
-                      style: 'destructive',
-                      onPress: () => router.back(),
-                    },
-                  ]
-                );
-              } else {
-                router.back();
-              }
-            }}
-            cursor="pointer"
-          >
-            <X size={20} color={colors.text} strokeWidth={2.5} />
-          </XStack>
+          <XStack width={40} />
 
           <Text fontSize={17} fontWeight="700" color={colors.text} fontFamily="$body">
             Sell Item

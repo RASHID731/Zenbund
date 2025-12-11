@@ -1,5 +1,5 @@
 import { Text, XStack } from 'tamagui';
-import { MessageCircle, Plus, Settings } from 'lucide-react-native';
+import { MessageCircle, Heart, Settings } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -24,7 +24,7 @@ export function Navbar({ currentPage = 'home' }: NavbarProps) {
       paddingBottom={12}
       backgroundColor={colors.background}
     >
-      {/* Left side - Sell Button */}
+      {/* Left side - Wishlist Button */}
       <XStack>
         <XStack
           width={40}
@@ -38,11 +38,11 @@ export function Navbar({ currentPage = 'home' }: NavbarProps) {
             scale: 0.95,
           }}
           onPress={() => {
-            router.push('/sell-modal');
+            router.push('/wishlist');
           }}
           cursor="pointer"
         >
-          <Plus size={24} color={colors.text} strokeWidth={2.5} />
+          <Heart size={20} color={colors.text} strokeWidth={2.5} />
         </XStack>
       </XStack>
 

@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { View } from 'react-native';
-import { Home, Search, Users, User } from 'lucide-react-native';
+import { Home, Search, Users, User, PlusCircle } from 'lucide-react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { Colors } from '@/constants/theme';
@@ -55,6 +55,21 @@ export default function TabLayout() {
               </View>
             ) : (
               <Search size={24} color={color} strokeWidth={2.5} />
+            )
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="sell"
+        options={{
+          title: 'Sell',
+          tabBarIcon: ({ color, focused }) => (
+            focused ? (
+              <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.tabIconSelected, alignItems: 'center', justifyContent: 'center'}}>
+                <PlusCircle size={20} color={colors.background} strokeWidth={2.5} />
+              </View>
+            ) : (
+              <PlusCircle size={24} color={color} strokeWidth={2.5} />
             )
           ),
         }}
