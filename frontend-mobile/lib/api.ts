@@ -8,7 +8,7 @@ export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost
 const JWT_TOKEN_KEY = 'jwt_token';
 
 export interface ApiResponse<T> {
-  data: T;
+  data: T | null;
   message?: string;
   success: boolean;
 }

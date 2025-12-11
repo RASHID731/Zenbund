@@ -14,6 +14,10 @@ public class AuthResponse {
     private String name;
     private String university;
     private String major;
+    private String year;
+    private String instagramLink;
+    private String bio;
+    private String profilePicture;
 
     // No-argument constructor
     public AuthResponse() {
@@ -27,6 +31,21 @@ public class AuthResponse {
         this.name = name;
         this.university = university;
         this.major = major;
+    }
+
+    // Constructor with all fields
+    public AuthResponse(String token, Long userId, String email, String name, String university, String major,
+                       String year, String instagramLink, String bio, String profilePicture) {
+        this.token = token;
+        this.userId = userId;
+        this.email = email;
+        this.name = name;
+        this.university = university;
+        this.major = major;
+        this.year = year;
+        this.instagramLink = instagramLink;
+        this.bio = bio;
+        this.profilePicture = profilePicture;
     }
 
     // Getters and Setters
@@ -86,6 +105,38 @@ public class AuthResponse {
         this.major = major;
     }
 
+    public String getYear() {
+        return year;
+    }
+
+    public void setYear(String year) {
+        this.year = year;
+    }
+
+    public String getInstagramLink() {
+        return instagramLink;
+    }
+
+    public void setInstagramLink(String instagramLink) {
+        this.instagramLink = instagramLink;
+    }
+
+    public String getBio() {
+        return bio;
+    }
+
+    public void setBio(String bio) {
+        this.bio = bio;
+    }
+
+    public String getProfilePicture() {
+        return profilePicture;
+    }
+
+    public void setProfilePicture(String profilePicture) {
+        this.profilePicture = profilePicture;
+    }
+
     @Override
     public String toString() {
         return "AuthResponse{" +
@@ -95,7 +146,9 @@ public class AuthResponse {
                 ", name='" + name + '\'' +
                 ", university='" + university + '\'' +
                 ", major='" + major + '\'' +
+                ", year='" + year + '\'' +
+                ", instagramLink='" + instagramLink + '\'' +
                 '}';
-        // Note: Don't include token in toString() for security (logs)
+        // Note: Don't include token, bio, or profilePicture in toString() for security/brevity
     }
 }

@@ -10,6 +10,10 @@ export interface User {
   name: string;
   university: string;
   major: string;
+  year?: string;
+  instagramLink?: string;
+  bio?: string;
+  profilePicture?: string;
 }
 
 /**
@@ -23,6 +27,10 @@ interface AuthResponse {
   name: string;
   university: string;
   major: string;
+  year?: string;
+  instagramLink?: string;
+  bio?: string;
+  profilePicture?: string;
 }
 
 /**
@@ -136,6 +144,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: response.data.name,
           university: response.data.university,
           major: response.data.major,
+          year: response.data.year,
+          instagramLink: response.data.instagramLink,
+          bio: response.data.bio,
+          profilePicture: response.data.profilePicture,
         });
 
         return { success: true };
@@ -177,6 +189,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: response.data.name,
           university: response.data.university,
           major: response.data.major,
+          year: response.data.year,
+          instagramLink: response.data.instagramLink,
+          bio: response.data.bio,
+          profilePicture: response.data.profilePicture,
         });
 
         return { success: true };

@@ -99,7 +99,11 @@ public class UserServiceImpl implements UserService {
                 savedUser.getEmail(),
                 savedUser.getName(),
                 savedUser.getUniversity(),
-                savedUser.getMajor()
+                savedUser.getMajor(),
+                savedUser.getYear(),
+                savedUser.getInstagramLink(),
+                savedUser.getBio(),
+                savedUser.getProfilePicture()
         );
     }
 
@@ -149,7 +153,11 @@ public class UserServiceImpl implements UserService {
                 user.getEmail(),
                 user.getName(),
                 user.getUniversity(),
-                user.getMajor()
+                user.getMajor(),
+                user.getYear(),
+                user.getInstagramLink(),
+                user.getBio(),
+                user.getProfilePicture()
         );
     }
 
