@@ -26,6 +26,7 @@ import { useRouter } from 'expo-router';
 import { Alert } from 'react-native';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SettingsItemProps {
   icon: any;
@@ -120,6 +121,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
+  const { logout, deleteAccount } = useAuth();
 
   // Toggle states
   const [pushNotifications, setPushNotifications] = useState(true);
@@ -138,9 +140,13 @@ export default function SettingsScreen() {
         {
           text: 'Log Out',
           style: 'destructive',
-          onPress: () => {
-            // TODO: Implement logout logic
-            Alert.alert('Logged Out', 'You have been logged out successfully.');
+          onPress: async () => {
+            try {
+              await logout();
+              router.replace('/login');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to log out. Please try again.');
+            }
           },
         },
       ]
@@ -160,8 +166,40 @@ export default function SettingsScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            // TODO: Implement account deletion
-            Alert.alert('Account Deletion', 'Account deletion initiated.');
+            // Prompt for password confirmation
+            Alert.prompt(
+              'Confirm Password',
+              'Please enter your password to confirm account deletion:',
+              [
+                {
+                  text: 'Cancel',
+                  style: 'cancel',
+                },
+                {
+                  text: 'Delete Account',
+                  style: 'destructive',
+                  onPress: async (password?: string) => {
+                    if (!password) {
+                      Alert.alert('Error', 'Password is required to delete your account.');
+                      return;
+                    }
+
+                    try {
+                      const result = await deleteAccount(password);
+
+                      if (result.success) {
+                        router.replace('/login');
+                      } else {
+                        Alert.alert('Error', result.message || 'Failed to delete account');
+                      }
+                    } catch (error) {
+                      Alert.alert('Error', 'Failed to delete account. Please try again.');
+                    }
+                  },
+                },
+              ],
+              'secure-text'
+            );
           },
         },
       ]

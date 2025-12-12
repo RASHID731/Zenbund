@@ -1,12 +1,15 @@
 package com.zenbund.backend.controller;
 
+import com.zenbund.backend.dto.request.DeleteAccountRequest;
 import com.zenbund.backend.dto.request.LoginRequest;
 import com.zenbund.backend.dto.request.RegisterRequest;
 import com.zenbund.backend.dto.response.AuthResponse;
+import com.zenbund.backend.entity.User;
 import com.zenbund.backend.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -105,5 +108,47 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = userService.login(request);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Delete user account permanently.
+     *
+     * Endpoint: DELETE /api/auth/account
+     * Request Body: DeleteAccountRequest (password for confirmation)
+     * Response: Success message
+     * Status: 200 OK on success
+     *
+     * Requires authentication (JWT token in Authorization header).
+     * User can only delete their own account.
+     *
+     * This will:
+     * - Verify password is correct
+     * - Delete all user's offers/listings
+     * - Anonymize all user's comments (preserve conversations)
+     * - Delete all thread memberships
+     * - Permanently delete the user account
+     *
+     * Example request:
+     * {
+     *   "password": "UserPassword123"
+     * }
+     *
+     * Example response:
+     * {
+     *   "message": "Account deleted successfully"
+     * }
+     *
+     * Error responses:
+     * - 401 UNAUTHORIZED: Invalid or missing JWT token
+     * - 400 BAD REQUEST: Password is required
+     * - 403 FORBIDDEN: Incorrect password
+     */
+    @DeleteMapping("/account")
+    public ResponseEntity<?> deleteAccount(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody DeleteAccountRequest request) {
+        // User is automatically extracted from JWT by Spring Security
+        userService.deleteAccount(user.getId(), request.getPassword());
+        return ResponseEntity.ok().body(java.util.Map.of("message", "Account deleted successfully"));
     }
 }

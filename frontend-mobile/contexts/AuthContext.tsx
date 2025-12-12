@@ -62,6 +62,7 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   updateProfile: (updatedUserData: Partial<User>) => Promise<void>;
+  deleteAccount: (password: string) => Promise<{ success: boolean; message?: string }>;
 }
 
 // Create context with undefined default value
@@ -241,6 +242,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  /**
+   * Delete user account permanently.
+   *
+   * Flow:
+   * 1. Call backend DELETE /api/auth/account with password
+   * 2. Clear JWT token from SecureStore
+   * 3. Clear user state
+   * 4. Return success
+   */
+  const deleteAccount = async (password: string) => {
+    const response = await apiClient.delete<{ message: string }>('/auth/account', {
+      password,
+    });
+
+    if (response.success) {
+      // Clear JWT token
+      await apiClient.clearToken();
+
+      // Clear user state
+      setUser(null);
+
+      return { success: true, message: 'Account deleted successfully' };
+    } else {
+      return {
+        success: false,
+        message: response.message || 'Failed to delete account',
+      };
+    }
+  };
+
   const value: AuthContextValue = {
     user,
     isAuthenticated: user !== null,
@@ -250,6 +281,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     checkAuth,
     updateProfile,
+    deleteAccount,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

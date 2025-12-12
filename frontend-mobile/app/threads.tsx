@@ -77,7 +77,7 @@ export default function ThreadsScreen() {
         `/thread-members?userId=${user.userId}`
       );
 
-      if (response.success) {
+      if (response.success && response.data) {
         // Map memberships to thread data
         const threads = response.data.map(m => ({
           id: m.threadId,
@@ -106,7 +106,7 @@ export default function ThreadsScreen() {
         `/comments?threadId=${activeThreadId}`
       );
 
-      if (response.success) {
+      if (response.success && response.data) {
         setComments(response.data);
       }
     } catch (error) {
@@ -136,7 +136,7 @@ export default function ThreadsScreen() {
         setComments(comments.map(c => {
           if (c.id === commentId) {
             // Preserve existing replies array (server returns empty array)
-            return { ...updatedComment, replies: c.replies };
+            return { ...updatedComment, replies: c.replies } as Comment;
           }
           if (c.replies) {
             return {
@@ -144,7 +144,7 @@ export default function ThreadsScreen() {
               replies: c.replies.map(r =>
                 r.id === commentId ? updatedComment : r
               ),
-            };
+            } as Comment;
           }
           return c;
         }));

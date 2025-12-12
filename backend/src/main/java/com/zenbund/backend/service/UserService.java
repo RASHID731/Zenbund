@@ -56,4 +56,15 @@ public interface UserService extends UserDetailsService {
      * @throws com.zenbund.backend.exception.ResourceNotFoundException if user not found
      */
     UpdateProfileResponse updateProfile(String email, UpdateProfileRequest request);
+
+    /**
+     * Delete user account permanently.
+     * Validates password before deletion, removes all user data and listings.
+     *
+     * @param userId User's ID
+     * @param password User's password for confirmation
+     * @throws com.zenbund.backend.exception.ResourceNotFoundException if user not found
+     * @throws org.springframework.security.authentication.BadCredentialsException if password is incorrect
+     */
+    void deleteAccount(Long userId, String password);
 }

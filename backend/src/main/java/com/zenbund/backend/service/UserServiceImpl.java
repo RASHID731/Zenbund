@@ -5,7 +5,13 @@ import com.zenbund.backend.dto.request.RegisterRequest;
 import com.zenbund.backend.dto.request.UpdateProfileRequest;
 import com.zenbund.backend.dto.response.AuthResponse;
 import com.zenbund.backend.dto.response.UpdateProfileResponse;
+import com.zenbund.backend.entity.Comment;
+import com.zenbund.backend.entity.Offer;
+import com.zenbund.backend.entity.ThreadMember;
 import com.zenbund.backend.entity.User;
+import com.zenbund.backend.repository.CommentRepository;
+import com.zenbund.backend.repository.OfferRepository;
+import com.zenbund.backend.repository.ThreadMemberRepository;
 import com.zenbund.backend.repository.UserRepository;
 import com.zenbund.backend.security.JwtUtil;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -17,6 +23,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 /**
  * Implementation of UserService with authentication logic.
  * Handles user registration, login, and Spring Security integration.
@@ -26,6 +34,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final OfferRepository offerRepository;
+    private final CommentRepository commentRepository;
+    private final ThreadMemberRepository threadMemberRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
@@ -36,10 +47,16 @@ public class UserServiceImpl implements UserService {
      */
     public UserServiceImpl(
             UserRepository userRepository,
+            OfferRepository offerRepository,
+            CommentRepository commentRepository,
+            ThreadMemberRepository threadMemberRepository,
             PasswordEncoder passwordEncoder,
             JwtUtil jwtUtil,
             AuthenticationManager authenticationManager) {
         this.userRepository = userRepository;
+        this.offerRepository = offerRepository;
+        this.commentRepository = commentRepository;
+        this.threadMemberRepository = threadMemberRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.authenticationManager = authenticationManager;
@@ -229,5 +246,58 @@ public class UserServiceImpl implements UserService {
                 updatedUser.getYear(),
                 updatedUser.getInstagramLink()
         );
+    }
+
+    /**
+     * Delete user account permanently.
+     *
+     * Flow:
+     * 1. Find user by ID
+     * 2. Verify password is correct
+     * 3. Delete all user's offers
+     * 4. Delete all user's comments (with cascade deletion for replies)
+     *    - For parent comments: deletes all replies from other users first
+     *    - Then deletes all user's comments (matches normal comment deletion behavior)
+     * 5. Delete all thread memberships
+     * 6. Delete user account
+     */
+    @Override
+    public void deleteAccount(Long userId, String password) {
+        // Step 1: Find user by ID
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with ID: " + userId));
+
+        // Step 2: Verify password
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+            throw new BadCredentialsException("Incorrect password");
+        }
+
+        // Step 3: Delete all user's offers
+        List<Offer> userOffers = offerRepository.findByUserId(userId);
+        offerRepository.deleteAll(userOffers);
+
+        // Step 4: Delete all user's comments with cascade deletion for replies
+        // This matches the behavior of normal comment deletion
+
+        // First, find all parent comments (where parentCommentId is null)
+        List<Comment> allUserComments = commentRepository.findByUserId(userId);
+        List<Comment> parentComments = allUserComments.stream()
+                .filter(comment -> comment.getParentCommentId() == null)
+                .toList();
+
+        // For each parent comment, delete all its replies first (cascade)
+        for (Comment parentComment : parentComments) {
+            commentRepository.deleteByParentCommentId(parentComment.getId());
+        }
+
+        // Then delete all the user's comments (both parent and reply comments)
+        commentRepository.deleteAll(allUserComments);
+
+        // Step 5: Delete all thread memberships
+        List<ThreadMember> threadMemberships = threadMemberRepository.findByUserId(userId);
+        threadMemberRepository.deleteAll(threadMemberships);
+
+        // Step 6: Delete user account
+        userRepository.delete(user);
     }
 }
