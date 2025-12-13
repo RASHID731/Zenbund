@@ -2,13 +2,13 @@ import { Text, YStack, XStack, ScrollView } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { Image, FlatList } from 'react-native';
-import { Home, Shirt, BookOpen, Gamepad2, SlidersHorizontal, ChevronDown } from 'lucide-react-native';
+import { SlidersHorizontal, ChevronDown } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Navbar } from '@/components/navbar';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { apiClient } from '@/lib/api';
-import { Offer, CATEGORY_MAP } from '@/types';
+import { Offer, Category } from '@/types';
 
 // Frontend display type (transformed from backend Offer)
 interface ListingDisplay {
@@ -26,8 +26,11 @@ interface ListingDisplay {
 }
 
 // Transform backend Offer to frontend ListingDisplay
-function transformOfferToListing(offer: Offer): ListingDisplay {
-  const categoryInfo = CATEGORY_MAP[offer.categoryId] || CATEGORY_MAP[6];
+function transformOfferToListing(
+  offer: Offer,
+  categoryMap: Record<number, { name: string; emoji: string }>
+): ListingDisplay {
+  const categoryInfo = categoryMap[offer.categoryId] || { name: 'Other', emoji: '📦' };
   return {
     id: offer.id,
     name: offer.title,
@@ -47,22 +50,46 @@ export default function HomeScreen() {
   const [sortBy, setSortBy] = useState('Most Recent');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [listings, setListings] = useState<ListingDisplay[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
 
-  // Fetch offers from API on mount
+  // Fetch categories and offers from API on mount
   useEffect(() => {
-    async function fetchOffers() {
-      const response = await apiClient.get<Offer[]>('/offers');
-      if (response.success && response.data) {
-        const transformedListings = response.data.map(transformOfferToListing);
+    async function fetchData() {
+      // Fetch categories
+      setLoadingCategories(true);
+      const categoriesResponse = await apiClient.get<Category[]>('/categories');
+      let categoryMap: Record<number, { name: string; emoji: string }> = {};
+
+      if (categoriesResponse.success && categoriesResponse.data) {
+        setCategories(categoriesResponse.data);
+        // Create category lookup map
+        categoryMap = categoriesResponse.data.reduce((acc, cat) => {
+          acc[cat.id] = { name: cat.name, emoji: cat.emoji };
+          return acc;
+        }, {} as Record<number, { name: string; emoji: string }>);
+      } else {
+        console.error('Failed to fetch categories:', categoriesResponse.message);
+        setCategoriesError(categoriesResponse.message || 'Failed to load categories');
+      }
+      setLoadingCategories(false);
+
+      // Fetch offers
+      const offersResponse = await apiClient.get<Offer[]>('/offers');
+      if (offersResponse.success && offersResponse.data) {
+        const transformedListings = offersResponse.data.map(offer =>
+          transformOfferToListing(offer, categoryMap)
+        );
         setListings(transformedListings);
       } else {
-        console.error('Failed to fetch offers:', response.message);
+        console.error('Failed to fetch offers:', offersResponse.message);
       }
     }
-    fetchOffers();
+    fetchData();
   }, []);
 
   const openListingDetail = (listing: ListingDisplay) => {
@@ -90,152 +117,74 @@ export default function HomeScreen() {
 
         <ScrollView flex={1} showsVerticalScrollIndicator={false}>
           <YStack paddingHorizontal={20} paddingTop={16} paddingBottom={24} gap={20} backgroundColor={colors.background}>
-            {/* Category Buttons - Wolt Style */}
-            <XStack gap={16} width="100%" justifyContent="space-around">
-              {/* Dorm */}
-              <YStack
-                alignItems="center"
-                gap={8}
-                pressStyle={{
-                  opacity: 0.7,
-                }}
-                onPress={() => {
-                  router.push('/dorm');
-                }}
-                cursor="pointer"
-              >
-                <YStack
-                  width={56}
-                  height={56}
-                  backgroundColor={colorScheme === 'light' ? '#E3F2FD' : '#1565C0'}
-                  borderRadius={28}
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  <Home
-                    size={24}
-                    color={colorScheme === 'light' ? '#1976D2' : '#E3F2FD'}
-                    strokeWidth={2}
-                  />
+            {/* Category Slider - Horizontal ScrollView */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                gap: 12,
+              }}
+            >
+              {loadingCategories ? (
+                // Loading skeleton: 4 placeholder circles
+                [1, 2, 3, 4].map((i) => (
+                  <YStack key={i} alignItems="center" gap={8} opacity={0.5}>
+                    <YStack
+                      width={56}
+                      height={56}
+                      backgroundColor={colors.backgroundSecondary}
+                      borderRadius={28}
+                    />
+                    <YStack
+                      width={50}
+                      height={12}
+                      backgroundColor={colors.backgroundSecondary}
+                      borderRadius={6}
+                    />
+                  </YStack>
+                ))
+              ) : categoriesError ? (
+                // Error state
+                <YStack padding={20} alignItems="center">
+                  <Text fontSize={14} color={colors.textSecondary} fontFamily="$body">
+                    {categoriesError}
+                  </Text>
                 </YStack>
-                <Text
-                  fontSize={12}
-                  fontWeight="600"
-                  color={colors.text}
-                  fontFamily="$body"
-                >
-                  Dorm
-                </Text>
-              </YStack>
-
-              {/* Fashion */}
-              <YStack
-                alignItems="center"
-                gap={8}
-                pressStyle={{
-                  opacity: 0.7,
-                }}
-                onPress={() => {
-                  router.push('/fashion');
-                }}
-                cursor="pointer"
-              >
-                <YStack
-                  width={56}
-                  height={56}
-                  backgroundColor={colorScheme === 'light' ? '#FCE4EC' : '#AD1457'}
-                  borderRadius={28}
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  <Shirt
-                    size={24}
-                    color={colorScheme === 'light' ? '#C2185B' : '#FCE4EC'}
-                    strokeWidth={2}
-                  />
-                </YStack>
-                <Text
-                  fontSize={12}
-                  fontWeight="600"
-                  color={colors.text}
-                  fontFamily="$body"
-                >
-                  Fashion
-                </Text>
-              </YStack>
-
-              {/* School */}
-              <YStack
-                alignItems="center"
-                gap={8}
-                pressStyle={{
-                  opacity: 0.7,
-                }}
-                onPress={() => {
-                  router.push('/school');
-                }}
-                cursor="pointer"
-              >
-                <YStack
-                  width={56}
-                  height={56}
-                  backgroundColor={colorScheme === 'light' ? '#E8F5E9' : '#2E7D32'}
-                  borderRadius={28}
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  <BookOpen
-                    size={24}
-                    color={colorScheme === 'light' ? '#388E3C' : '#E8F5E9'}
-                    strokeWidth={2}
-                  />
-                </YStack>
-                <Text
-                  fontSize={12}
-                  fontWeight="600"
-                  color={colors.text}
-                  fontFamily="$body"
-                >
-                  School
-                </Text>
-              </YStack>
-
-              {/* Hobbies */}
-              <YStack
-                alignItems="center"
-                gap={8}
-                pressStyle={{
-                  opacity: 0.7,
-                }}
-                onPress={() => {
-                  router.push('/hobbies');
-                }}
-                cursor="pointer"
-              >
-                <YStack
-                  width={56}
-                  height={56}
-                  backgroundColor={colorScheme === 'light' ? '#FFF3E0' : '#E65100'}
-                  borderRadius={28}
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  <Gamepad2
-                    size={24}
-                    color={colorScheme === 'light' ? '#F57C00' : '#FFF3E0'}
-                    strokeWidth={2}
-                  />
-                </YStack>
-                <Text
-                  fontSize={12}
-                  fontWeight="600"
-                  color={colors.text}
-                  fontFamily="$body"
-                >
-                  Hobbies
-                </Text>
-              </YStack>
-            </XStack>
+              ) : (
+                // Success state: Map over categories
+                categories.map((category) => (
+                  <YStack
+                    key={category.id}
+                    alignItems="center"
+                    gap={8}
+                    minWidth={70}
+                    pressStyle={{ opacity: 0.7 }}
+                    onPress={() => router.push(`/category/${category.id}`)}
+                    cursor="pointer"
+                  >
+                    <YStack
+                      width={56}
+                      height={56}
+                      backgroundColor={colors.backgroundTertiary}
+                      borderRadius={28}
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      <Text fontSize={32}>{category.emoji}</Text>
+                    </YStack>
+                    <Text
+                      fontSize={12}
+                      fontWeight="600"
+                      color={colors.text}
+                      fontFamily="$body"
+                      numberOfLines={1}
+                    >
+                      {category.name}
+                    </Text>
+                  </YStack>
+                ))
+              )}
+            </ScrollView>
 
             {/* Sorting and Filter */}
             <XStack gap={12} width="100%" alignItems="center">

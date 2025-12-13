@@ -53,7 +53,7 @@ export default function RootLayout() {
                 <Stack.Screen name="seller-listing-detail" options={{ presentation: 'modal', headerShown: false }} />
                 <Stack.Screen name="chat" options={{ headerShown: false }} />
                 <Stack.Screen name="threads" options={{ headerShown: false }} />
-                <Stack.Screen name="[category]" options={{ headerShown: false }} />
+                <Stack.Screen name="category/[id]" options={{ headerShown: false }} />
                 <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
                 <Stack.Screen name="settings" options={{ headerShown: false }} />
                 <Stack.Screen name="thread-settings" options={{ presentation: 'modal', headerShown: false }} />

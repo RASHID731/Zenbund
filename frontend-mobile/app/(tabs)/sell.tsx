@@ -1,7 +1,7 @@
 import { Text, YStack, XStack, ScrollView, Input } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
-import { X, Camera, Euro, Tag, MapPin, MessageSquare, Image as ImageIcon } from 'lucide-react-native';
+import { useState, useEffect } from 'react';
+import { X, Camera, Euro, Tag, MapPin, MessageSquare, Image as ImageIcon, ChevronDown } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Alert, Image, TouchableOpacity } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -9,7 +9,7 @@ import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { apiClient } from '@/lib/api';
-import { CATEGORY_NAME_TO_ID } from '@/types';
+import { Category } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface SelectedImage {
@@ -26,11 +26,16 @@ export default function SellTab() {
 
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
-  const [category, setCategory] = useState('');
+  const [categoryId, setCategoryId] = useState<number | null>(null);
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [images, setImages] = useState<SelectedImage[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Category dropdown state
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
   // Error states for validation
   const [errors, setErrors] = useState({
@@ -38,6 +43,24 @@ export default function SellTab() {
     price: '',
     images: '',
   });
+
+  // Fetch categories on mount
+  useEffect(() => {
+    async function fetchCategories() {
+      setLoadingCategories(true);
+      const response = await apiClient.get<Category[]>('/categories');
+      if (response.success && response.data) {
+        setCategories(response.data);
+      } else {
+        console.error('Failed to fetch categories:', response.message);
+      }
+      setLoadingCategories(false);
+    }
+    fetchCategories();
+  }, []);
+
+  // Get selected category for display
+  const selectedCategory = categories.find(c => c.id === categoryId);
 
   // Compress image to reduce size
   async function compressImage(uri: string): Promise<string> {
@@ -188,12 +211,10 @@ export default function SellTab() {
       }
 
       // Add offer data
-      const categoryId = CATEGORY_NAME_TO_ID[category] || 6; // Default to "Other"
-
       formData.append('userId', user.userId.toString());
       formData.append('title', title);
       formData.append('price', price);
-      formData.append('categoryId', categoryId.toString());
+      formData.append('categoryId', categoryId?.toString() || '');
       formData.append('pickupLocation', location || 'To be determined');
       formData.append('description', description || '');
 
@@ -208,7 +229,7 @@ export default function SellTab() {
               // Clear form
               setTitle('');
               setPrice('');
-              setCategory('');
+              setCategoryId(null);
               setLocation('');
               setDescription('');
               setImages([]);
@@ -429,7 +450,7 @@ export default function SellTab() {
                 </YStack>
 
                 {/* Category */}
-                <YStack flex={1} gap={8}>
+                <YStack flex={2} gap={8} position="relative" zIndex={showCategoryDropdown ? 1000 : 1}>
                   <Text fontSize={15} fontWeight="600" color={colors.text} fontFamily="$body">
                     Category
                   </Text>
@@ -437,27 +458,82 @@ export default function SellTab() {
                     backgroundColor={colors.backgroundSecondary}
                     borderRadius={20}
                     paddingHorizontal={16}
-                    alignItems="center"
                     borderColor={colors.border}
                     borderWidth={1}
                     gap={8}
+                    alignItems="center"
+                    height={47}
+                    pressStyle={{ backgroundColor: colors.backgroundTertiary, scale: 0.98 }}
+                    cursor="pointer"
+                    onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
                   >
                     <Tag size={20} color={colors.icon} strokeWidth={2.5} />
-                    <Input
+                    <Text
                       flex={1}
-                      placeholder="Select"
-                      placeholderTextColor={colors.textTertiary}
-                      value={category}
-                      onChangeText={setCategory}
-                      borderWidth={0}
-                      backgroundColor="transparent"
-                      paddingHorizontal={0}
-                      paddingVertical={0}
                       fontSize={16}
                       fontFamily="$body"
-                      color={colors.text}
-                    />
+                      color={selectedCategory ? colors.text : colors.textTertiary}
+                      numberOfLines={1}
+                    >
+                      {loadingCategories ? 'Loading...' : selectedCategory ? `${selectedCategory.emoji} ${selectedCategory.name}` : 'Select'}
+                    </Text>
+                    <ChevronDown size={20} color={colors.icon} strokeWidth={2.5} />
                   </XStack>
+
+                  {/* Dropdown List */}
+                  {showCategoryDropdown && (
+                    <YStack
+                      position="absolute"
+                      top="100%"
+                      left={0}
+                      right={0}
+                      backgroundColor={colors.card}
+                      borderRadius={16}
+                      borderWidth={1}
+                      borderColor={colors.border}
+                      marginTop={4}
+                      maxHeight={250}
+                      zIndex={1000}
+                      shadowColor="#000"
+                      shadowOffset={{ width: 0, height: 2 }}
+                      shadowOpacity={0.1}
+                      shadowRadius={8}
+                      elevation={5}
+                    >
+                      <ScrollView showsVerticalScrollIndicator={false}>
+                        <YStack padding={8} gap={4}>
+                          {categories.map((cat) => (
+                            <XStack
+                              key={cat.id}
+                              backgroundColor={categoryId === cat.id ? colors.backgroundTertiary : 'transparent'}
+                              borderRadius={12}
+                              paddingHorizontal={12}
+                              paddingVertical={10}
+                              alignItems="center"
+                              gap={10}
+                              pressStyle={{ opacity: 0.7, backgroundColor: colors.backgroundSecondary }}
+                              cursor="pointer"
+                              onPress={() => {
+                                setCategoryId(cat.id);
+                                setShowCategoryDropdown(false);
+                              }}
+                            >
+                              <Text fontSize={24}>{cat.emoji}</Text>
+                              <Text
+                                flex={1}
+                                fontSize={15}
+                                fontWeight={categoryId === cat.id ? "600" : "500"}
+                                color={colors.text}
+                                fontFamily="$body"
+                              >
+                                {cat.name}
+                              </Text>
+                            </XStack>
+                          ))}
+                        </YStack>
+                      </ScrollView>
+                    </YStack>
+                  )}
                 </YStack>
               </XStack>
 

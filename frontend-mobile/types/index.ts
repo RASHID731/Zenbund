@@ -120,25 +120,3 @@ export interface Wishlist {
   user?: User;
   offer?: Offer;
 }
-
-// Category mapping helpers (temporary until backend provides categories)
-export const CATEGORY_MAP: Record<number, { name: string; emoji: string }> = {
-  1: { name: 'Dorm', emoji: '🏠' },
-  2: { name: 'Fashion', emoji: '👕' },
-  3: { name: 'School', emoji: '📚' },
-  4: { name: 'Electronics', emoji: '💻' },
-  5: { name: 'Gaming', emoji: '🎮' },
-  6: { name: 'Other', emoji: '📦' },
-};
-
-export const CATEGORY_NAME_TO_ID: Record<string, number> = {
-  'Dorm': 1,
-  'Fashion': 2,
-  'School': 3,
-  'Electronics': 4,
-  'Gaming': 5,
-  'Other': 6,
-  'Mathematics': 3, // Map to School
-  'Furniture': 1, // Map to Dorm
-  'Clothing': 2, // Map to Fashion
-};
