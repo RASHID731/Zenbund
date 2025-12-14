@@ -96,6 +96,7 @@ export default function HomeScreen() {
     router.push({
       pathname: '/listing-detail',
       params: {
+        id: listing.id,
         name: listing.name,
         category: listing.category,
         price: listing.price,

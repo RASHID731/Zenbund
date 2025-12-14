@@ -3,7 +3,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Edit3, CheckCircle, Info, Tag, MapPin } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors } from '@/constants/theme';
-import { Sizes, FontSizes, BorderRadius } from '@/constants/sizes';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function SellerListingDetailModal() {
@@ -45,106 +44,106 @@ export default function SellerListingDetailModal() {
       <YStack flex={1} backgroundColor={colors.background}>
         {/* Header with Close Button */}
         <XStack
-          paddingHorizontal={Sizes.lg}
-          paddingVertical={Sizes.mdlg}
+          paddingHorizontal={20}
+          paddingVertical={16}
           alignItems="center"
           justifyContent="space-between"
           borderBottomWidth={1}
           borderBottomColor={colors.border}
         >
-          <Text fontSize={FontSizes.lg} fontWeight="700" color={colors.text} fontFamily="$body">
+          <Text fontSize={18} fontWeight="700" color={colors.text} fontFamily="$body">
             Manage Listing
           </Text>
           <XStack
-            width={Sizes.xxxxl}
-            height={Sizes.xxxxl}
+            width={40}
+            height={40}
             justifyContent="center"
             alignItems="center"
             pressStyle={{ opacity: 0.7 }}
             cursor="pointer"
             onPress={() => router.back()}
           >
-            <X size={Sizes.xl} color={colors.text} strokeWidth={2.5} />
+            <X size={24} color={colors.text} strokeWidth={2.5} />
           </XStack>
         </XStack>
 
         <ScrollView flex={1} showsVerticalScrollIndicator={false}>
-          <YStack gap={Sizes.xl} paddingBottom={Sizes.xl}>
+          <YStack gap={24} paddingBottom={24}>
             {/* Image */}
             <YStack
-              height={Sizes.image}
+              height={300}
               backgroundColor={colors.backgroundSecondary}
               justifyContent="center"
               alignItems="center"
               position="relative"
             >
-              <Text fontSize={FontSizes.emoji}>{listing.emoji}</Text>
+              <Text fontSize={120}>{listing.emoji}</Text>
 
               {/* Status Badge */}
               <XStack
                 position="absolute"
-                top={Sizes.mdlg}
-                right={Sizes.mdlg}
+                top={16}
+                right={16}
                 backgroundColor={listing.status === 'Available' ? '#10B981' : '#6B7280'}
-                paddingHorizontal={Sizes.md}
-                paddingVertical={Sizes.xs / 1.5}
-                borderRadius={BorderRadius.lg}
+                paddingHorizontal={12}
+                paddingVertical={2.67}
+                borderRadius={12}
               >
-                <Text fontSize={FontSizes.xs} fontWeight="600" color="white" fontFamily="$body">
+                <Text fontSize={12} fontWeight="600" color="white" fontFamily="$body">
                   {listing.status}
                 </Text>
               </XStack>
             </YStack>
 
             {/* Content */}
-            <YStack paddingHorizontal={Sizes.lg} gap={Sizes.lg}>
+            <YStack paddingHorizontal={20} gap={20}>
               {/* Name, Price, and Timestamp */}
-              <YStack gap={Sizes.sm}>
-                <Text fontSize={FontSizes.xxxl} fontWeight="700" color={colors.text} fontFamily="$body">
+              <YStack gap={8}>
+                <Text fontSize={26} fontWeight="700" color={colors.text} fontFamily="$body">
                   {listing.name}
                 </Text>
-                <YStack gap={Sizes.xs}>
-                  <Text fontSize={FontSizes.xxxxl} fontWeight="700" color={colors.primary} fontFamily="$body">
+                <YStack gap={4}>
+                  <Text fontSize={36} fontWeight="700" color={colors.primary} fontFamily="$body">
                     {listing.price}
                   </Text>
-                  <Text fontSize={FontSizes.xsm} color={colors.textSecondary} fontFamily="$body">
+                  <Text fontSize={13} color={colors.textSecondary} fontFamily="$body">
                     {getTimeSincePosted(listing.createdAt)}
                   </Text>
                 </YStack>
               </YStack>
 
               {/* Description */}
-              <YStack gap={Sizes.sm}>
-                <XStack gap={Sizes.sm} alignItems="center">
-                  <Info size={FontSizes.md} color={colors.text} strokeWidth={2.5} />
-                  <Text fontSize={FontSizes.smd} fontWeight="600" color={colors.text} fontFamily="$body">
+              <YStack gap={8}>
+                <XStack gap={8} alignItems="center">
+                  <Info size={16} color={colors.text} strokeWidth={2.5} />
+                  <Text fontSize={15} fontWeight="600" color={colors.text} fontFamily="$body">
                     Description
                   </Text>
                 </XStack>
-                <Text fontSize={FontSizes.sm} color={colors.textSecondary} fontFamily="$body" lineHeight={FontSizes.xxl}>
+                <Text fontSize={14} color={colors.textSecondary} fontFamily="$body" lineHeight={22}>
                   {listing.description}
                 </Text>
               </YStack>
 
               {/* Category & Location - Compact Row */}
-              <XStack gap={Sizes.mdlg} flexWrap="wrap">
+              <XStack gap={16} flexWrap="wrap">
                 {/* Category */}
                 <XStack
                   flex={1}
                   minWidth="45%"
-                  gap={Sizes.sm}
+                  gap={8}
                   alignItems="center"
                   backgroundColor={colors.backgroundSecondary}
-                  paddingHorizontal={Sizes.md}
-                  paddingVertical={Sizes.smd}
-                  borderRadius={BorderRadius.lg}
+                  paddingHorizontal={12}
+                  paddingVertical={10}
+                  borderRadius={12}
                 >
-                  <Tag size={FontSizes.md} color={colors.text} strokeWidth={2.5} />
+                  <Tag size={16} color={colors.text} strokeWidth={2.5} />
                   <YStack flex={1}>
-                    <Text fontSize={FontSizes.xs} color={colors.textSecondary} fontFamily="$body">
+                    <Text fontSize={12} color={colors.textSecondary} fontFamily="$body">
                       Category
                     </Text>
-                    <Text fontSize={FontSizes.sm} fontWeight="600" color={colors.text} fontFamily="$body">
+                    <Text fontSize={14} fontWeight="600" color={colors.text} fontFamily="$body">
                       {listing.category}
                     </Text>
                   </YStack>
@@ -154,19 +153,19 @@ export default function SellerListingDetailModal() {
                 <XStack
                   flex={1}
                   minWidth="45%"
-                  gap={Sizes.sm}
+                  gap={8}
                   alignItems="center"
                   backgroundColor={colors.backgroundSecondary}
-                  paddingHorizontal={Sizes.md}
-                  paddingVertical={Sizes.smd}
-                  borderRadius={BorderRadius.lg}
+                  paddingHorizontal={12}
+                  paddingVertical={10}
+                  borderRadius={12}
                 >
-                  <MapPin size={FontSizes.md} color={colors.text} strokeWidth={2.5} />
+                  <MapPin size={16} color={colors.text} strokeWidth={2.5} />
                   <YStack flex={1}>
-                    <Text fontSize={FontSizes.xs} color={colors.textSecondary} fontFamily="$body">
+                    <Text fontSize={12} color={colors.textSecondary} fontFamily="$body">
                       Pickup Location
                     </Text>
-                    <Text fontSize={FontSizes.sm} fontWeight="600" color={colors.text} fontFamily="$body">
+                    <Text fontSize={14} fontWeight="600" color={colors.text} fontFamily="$body">
                       {listing.location}
                     </Text>
                   </YStack>
@@ -174,22 +173,22 @@ export default function SellerListingDetailModal() {
               </XStack>
 
               {/* Seller Info */}
-              <YStack gap={Sizes.sm}>
-                <Text fontSize={FontSizes.smd} fontWeight="600" color={colors.text} fontFamily="$body">
+              <YStack gap={8}>
+                <Text fontSize={15} fontWeight="600" color={colors.text} fontFamily="$body">
                   Seller
                 </Text>
-                <XStack alignItems="center" gap={Sizes.md}>
+                <XStack alignItems="center" gap={12}>
                   <YStack
-                    width={Sizes.xxxxl}
-                    height={Sizes.xxxxl}
+                    width={40}
+                    height={40}
                     backgroundColor={colorScheme === 'light' ? '#F5F4FE' : '#38347F'}
-                    borderRadius={BorderRadius.xxl}
+                    borderRadius={20}
                     justifyContent="center"
                     alignItems="center"
                   >
-                    <Text fontSize={FontSizes.xl}>👤</Text>
+                    <Text fontSize={20}>👤</Text>
                   </YStack>
-                  <Text fontSize={FontSizes.smd} color={colors.text} fontWeight="500" fontFamily="$body">
+                  <Text fontSize={15} color={colors.text} fontWeight="500" fontFamily="$body">
                     {listing.seller}
                   </Text>
                 </XStack>
@@ -203,23 +202,23 @@ export default function SellerListingDetailModal() {
           backgroundColor={colors.background}
           borderTopWidth={1}
           borderTopColor={colors.border}
-          paddingHorizontal={Sizes.lg}
-          paddingTop={Sizes.md}
-          paddingBottom={Sizes.xxl}
-          gap={Sizes.md}
+          paddingHorizontal={20}
+          paddingTop={12}
+          paddingBottom={28}
+          gap={12}
         >
-          <XStack gap={Sizes.md}>
+          <XStack gap={12}>
             {/* Edit Listing Button */}
             <XStack
               flex={1}
               backgroundColor={colors.background}
               borderWidth={1.5}
               borderColor={colors.primary}
-              borderRadius={BorderRadius.xl}
-              paddingVertical={Sizes.smd}
+              borderRadius={16}
+              paddingVertical={10}
               justifyContent="center"
               alignItems="center"
-              gap={Sizes.sm}
+              gap={8}
               pressStyle={{ opacity: 0.7, scale: 0.98, backgroundColor: colors.backgroundSecondary }}
               cursor="pointer"
               onPress={() => {
@@ -227,8 +226,8 @@ export default function SellerListingDetailModal() {
                 // router.push(`/edit-listing?id=${params.id}`);
               }}
             >
-              <Edit3 size={FontSizes.xl} color={colors.primary} strokeWidth={2.5} />
-              <Text fontSize={FontSizes.smd} fontWeight="600" color={colors.primary} fontFamily="$body">
+              <Edit3 size={20} color={colors.primary} strokeWidth={2.5} />
+              <Text fontSize={15} fontWeight="600" color={colors.primary} fontFamily="$body">
                 Edit Listing
               </Text>
             </XStack>
@@ -237,11 +236,11 @@ export default function SellerListingDetailModal() {
             <XStack
               flex={1}
               backgroundColor={listing.status === 'Available' ? '#10B981' : colors.textSecondary}
-              borderRadius={BorderRadius.xl}
-              paddingVertical={Sizes.smd}
+              borderRadius={16}
+              paddingVertical={10}
               justifyContent="center"
               alignItems="center"
-              gap={Sizes.sm}
+              gap={8}
               pressStyle={{ opacity: 0.8, scale: 0.98 }}
               cursor="pointer"
               onPress={() => {
@@ -249,8 +248,8 @@ export default function SellerListingDetailModal() {
                 // handleToggleStatus();
               }}
             >
-              <CheckCircle size={FontSizes.xl} color="white" strokeWidth={2.5} />
-              <Text fontSize={FontSizes.smd} fontWeight="600" color="white" fontFamily="$body">
+              <CheckCircle size={20} color="white" strokeWidth={2.5} />
+              <Text fontSize={15} fontWeight="600" color="white" fontFamily="$body">
                 {listing.status === 'Available' ? 'Mark Sold' : 'Mark Available'}
               </Text>
             </XStack>

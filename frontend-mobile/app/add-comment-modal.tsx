@@ -46,7 +46,7 @@ export default function AddCommentModal() {
         `/thread-members?userId=${user.userId}&threadId=${threadId}`
       );
 
-      if (response.success) {
+      if (response.success && response.data) {
         setIsAnonymous(response.data.postAnonymously);
       }
     } catch (error) {
