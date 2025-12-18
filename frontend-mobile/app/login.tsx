@@ -57,6 +57,29 @@ export default function LoginScreen() {
     }
   }
 
+  /**
+   * Quick login - for development only
+   */
+  async function handleQuickLogin(testEmail: string, testPassword: string, userName: string) {
+    setErrorMessage('');
+    setIsLoading(true);
+
+    try {
+      const result = await login(testEmail, testPassword);
+
+      if (result.success) {
+        router.replace('/(tabs)');
+      } else {
+        setErrorMessage(`Quick login failed for ${userName}`);
+      }
+    } catch (error) {
+      console.error('Quick login error:', error);
+      setErrorMessage('Quick login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   function handleSkip() {
     // Dev only - bypass auth for testing
     router.replace('/(tabs)');
@@ -216,6 +239,90 @@ export default function LoginScreen() {
                 Skip for now
               </Text>
             </XStack>
+
+            {/* Quick Login Buttons - Dev Only */}
+            <YStack gap={8} marginTop={8}>
+              <Text fontSize={13} color={colors.textTertiary} textAlign="center" fontFamily="$body">
+                Quick Login (Dev Only)
+              </Text>
+              <XStack gap={8} flexWrap="wrap" justifyContent="center">
+                <XStack
+                  backgroundColor={colors.backgroundSecondary}
+                  borderRadius={8}
+                  paddingHorizontal={12}
+                  paddingVertical={8}
+                  borderWidth={1}
+                  borderColor={colors.border}
+                  pressStyle={{ opacity: 0.7, scale: 0.95 }}
+                  cursor="pointer"
+                  onPress={() => handleQuickLogin('alice@test.com', 'password123', 'Alice')}
+                >
+                  <Text fontSize={12} color={colors.text} fontFamily="$body">
+                    Alice
+                  </Text>
+                </XStack>
+                <XStack
+                  backgroundColor={colors.backgroundSecondary}
+                  borderRadius={8}
+                  paddingHorizontal={12}
+                  paddingVertical={8}
+                  borderWidth={1}
+                  borderColor={colors.border}
+                  pressStyle={{ opacity: 0.7, scale: 0.95 }}
+                  cursor="pointer"
+                  onPress={() => handleQuickLogin('bob@test.com', 'password123', 'Bob')}
+                >
+                  <Text fontSize={12} color={colors.text} fontFamily="$body">
+                    Bob
+                  </Text>
+                </XStack>
+                <XStack
+                  backgroundColor={colors.backgroundSecondary}
+                  borderRadius={8}
+                  paddingHorizontal={12}
+                  paddingVertical={8}
+                  borderWidth={1}
+                  borderColor={colors.border}
+                  pressStyle={{ opacity: 0.7, scale: 0.95 }}
+                  cursor="pointer"
+                  onPress={() => handleQuickLogin('charlie@test.com', 'password123', 'Charlie')}
+                >
+                  <Text fontSize={12} color={colors.text} fontFamily="$body">
+                    Charlie
+                  </Text>
+                </XStack>
+                <XStack
+                  backgroundColor={colors.backgroundSecondary}
+                  borderRadius={8}
+                  paddingHorizontal={12}
+                  paddingVertical={8}
+                  borderWidth={1}
+                  borderColor={colors.border}
+                  pressStyle={{ opacity: 0.7, scale: 0.95 }}
+                  cursor="pointer"
+                  onPress={() => handleQuickLogin('diana@test.com', 'password123', 'Diana')}
+                >
+                  <Text fontSize={12} color={colors.text} fontFamily="$body">
+                    Diana
+                  </Text>
+                </XStack>
+                <XStack
+                  backgroundColor={colors.backgroundSecondary}
+                  borderRadius={8}
+                  paddingHorizontal={12}
+                  paddingVertical={8}
+                  borderWidth={1}
+                  borderColor={colors.border}
+                  pressStyle={{ opacity: 0.7, scale: 0.95 }}
+                  cursor="pointer"
+                  onPress={() => handleQuickLogin('eve@test.com', 'password123', 'Eve')}
+                >
+                  <Text fontSize={12} color={colors.text} fontFamily="$body">
+                    Eve
+                  </Text>
+                </XStack>
+              </XStack>
+            </YStack>
           </YStack>
 
           {/* Register Link */}
