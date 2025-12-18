@@ -8,6 +8,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { apiClient } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { Chat } from '@/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -24,6 +25,7 @@ export default function ListingDetailModal() {
   // Parse listing data from params
   const listing = {
     id: params.id ? parseInt(params.id as string) : 0,
+    userId: params.userId ? parseInt(params.userId as string) : 0,
     name: params.name as string || 'Item',
     category: params.category as string || 'Category',
     price: params.price as string || '$0',
@@ -95,6 +97,34 @@ export default function ListingDetailModal() {
       Alert.alert('Error', error.message || 'Something went wrong. Please try again.');
     } finally {
       setWishlistLoading(false);
+    }
+  };
+
+  // Message seller - create or get chat
+  const handleMessageSeller = async () => {
+    if (!isAuthenticated) {
+      Alert.alert('Authentication Required', 'Please log in to message the seller.');
+      return;
+    }
+
+    if (!listing.userId) {
+      Alert.alert('Error', 'Seller information not available.');
+      return;
+    }
+
+    try {
+      const response = await apiClient.post<Chat>('/chats', {
+        otherUserId: listing.userId
+      });
+
+      if (response.success && response.data) {
+        router.push(`/chat/${response.data.id}`);
+      } else {
+        Alert.alert('Error', response.message || 'Failed to start chat. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Failed to create chat:', error);
+      Alert.alert('Error', error.message || 'Failed to start chat. Please try again.');
     }
   };
 
@@ -389,15 +419,13 @@ export default function ListingDetailModal() {
               opacity={listing.status === 'Available' ? 1 : 0.6}
               onPress={() => {
                 if (listing.status === 'Available') {
-                  // Navigate to chat
-                  router.back();
-                  router.push('/chat');
+                  handleMessageSeller();
                 }
               }}
             >
               <MessageCircle size={20} color="white" strokeWidth={2.5} />
               <Text fontSize={15} fontWeight="600" color="white" fontFamily="$body">
-                {listing.status === 'Available' ? 'Chat Seller' : 'Sold Out'}
+                {listing.status === 'Available' ? 'Message Seller' : 'Sold Out'}
               </Text>
             </XStack>
           </XStack>

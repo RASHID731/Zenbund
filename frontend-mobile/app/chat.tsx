@@ -1,65 +1,58 @@
+import { useState, useEffect } from 'react';
 import { Text, YStack, XStack, ScrollView, Input } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'react-native';
 import { ArrowLeft, Search } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
+import { Chat } from '@/types';
 
 export default function ChatScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
+  const { user } = useAuth();
 
-  const messages = [
-    {
-      id: 1,
-      name: 'Sarah Chen',
-      lastMessage: 'Is the textbook still available?',
-      time: '2m ago',
-      unread: 2,
-      avatar: '👩‍💼'
-    },
-    {
-      id: 2,
-      name: 'Mike Johnson',
-      lastMessage: 'Thanks for the quick response!',
-      time: '1h ago',
-      unread: 0,
-      avatar: '👨‍🎓'
-    },
-    {
-      id: 3,
-      name: 'Emma Wilson',
-      lastMessage: 'Can you meet at the library?',
-      time: '3h ago',
-      unread: 1,
-      avatar: '👩‍🎨'
-    },
-    {
-      id: 4,
-      name: 'Alex Rodriguez',
-      lastMessage: 'Perfect, see you tomorrow!',
-      time: '1d ago',
-      unread: 0,
-      avatar: '👨‍💻'
-    },
-    {
-      id: 5,
-      name: 'Lisa Park',
-      lastMessage: 'The price is negotiable',
-      time: '2d ago',
-      unread: 0,
-      avatar: '👩‍🔬'
-    },
-    {
-      id: 6,
-      name: 'David Kim',
-      lastMessage: 'Interested in the laptop',
-      time: '3d ago',
-      unread: 3,
-      avatar: '👨‍🏫'
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchChats();
+  }, []);
+
+  const fetchChats = async () => {
+    try {
+      setLoading(true);
+      const response = await apiClient.get<Chat[]>('/chats');
+      if (response.success && response.data) {
+        setChats(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch chats:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  // Format timestamp for display
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return '1d ago';
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
@@ -127,71 +120,93 @@ export default function ChatScreen() {
 
             {/* Messages List */}
             <YStack>
-              {messages.map((message) => (
-                <XStack
-                  key={message.id}
-                  backgroundColor="transparent"
-                  paddingHorizontal={20}
-                  paddingVertical={12}
-                  alignItems="center"
-                  gap={12}
-                  pressStyle={{ backgroundColor: colors.backgroundSecondary }}
-                  cursor="pointer"
-                >
-                  {/* Avatar */}
-                  <YStack
-                    width={56}
-                    height={56}
-                    backgroundColor={colorScheme === 'light' ? '#F5F4FE' : '#38347F'}
-                    borderRadius={28}
-                    justifyContent="center"
-                    alignItems="center"
-                  >
-                    <Text fontSize={28}>{message.avatar}</Text>
-                  </YStack>
+              {loading ? (
+                <YStack padding={40} alignItems="center">
+                  <Text fontSize={14} color={colors.textSecondary} fontFamily="$body">
+                    Loading chats...
+                  </Text>
+                </YStack>
+              ) : chats.length === 0 ? (
+                <YStack padding={40} alignItems="center">
+                  <Text fontSize={16} color={colors.textSecondary} fontFamily="$body">
+                    No conversations yet
+                  </Text>
+                  <Text fontSize={14} color={colors.textTertiary} fontFamily="$body" marginTop={8}>
+                    Start a chat by messaging a someone
+                  </Text>
+                </YStack>
+              ) : (
+                chats.map((chat) => {
+                  // Determine the other user in the chat
+                  const isUser1 = chat.user1Id === user?.userId;
+                  const otherUserId = isUser1 ? chat.user2Id : chat.user1Id;
+                  const otherUserName = isUser1
+                    ? (chat.user2Name || `User ${otherUserId}`)
+                    : (chat.user1Name || `User ${otherUserId}`);
+                  const otherUserAvatar = isUser1 ? chat.user2ProfilePicture : chat.user1ProfilePicture;
 
-                  {/* Message Info */}
-                  <YStack flex={1} gap={6}>
-                    <XStack justifyContent="space-between" alignItems="center">
-                      <Text fontSize={16} fontWeight="600" color={colors.text} fontFamily="$body">
-                        {message.name}
-                      </Text>
-                      <Text fontSize={13} color={colors.textSecondary} fontFamily="$body">
-                        {message.time}
-                      </Text>
-                    </XStack>
-
-                    <XStack justifyContent="space-between" alignItems="center">
-                      <Text
-                        fontSize={14}
-                        color={colors.textSecondary}
-                        fontFamily="$body"
-                        numberOfLines={1}
-                        flex={1}
-                        marginRight={8}
+                  return (
+                    <XStack
+                      key={chat.id}
+                      backgroundColor="transparent"
+                      paddingHorizontal={20}
+                      paddingVertical={12}
+                      alignItems="center"
+                      gap={12}
+                      pressStyle={{ backgroundColor: colors.backgroundSecondary }}
+                      cursor="pointer"
+                      onPress={() => router.push(`/chat/${chat.id}`)}
+                    >
+                      {/* Avatar */}
+                      <YStack
+                        width={56}
+                        height={56}
+                        backgroundColor={colorScheme === 'light' ? '#F5F4FE' : '#38347F'}
+                        borderRadius={28}
+                        justifyContent="center"
+                        alignItems="center"
+                        overflow="hidden"
                       >
-                        {message.lastMessage}
-                      </Text>
+                        {otherUserAvatar ? (
+                          <Image
+                            source={{ uri: otherUserAvatar }}
+                            style={{ width: 56, height: 56 }}
+                          />
+                        ) : (
+                          <Text fontSize={28}>👤</Text>
+                        )}
+                      </YStack>
 
-                      {message.unread > 0 && (
-                        <YStack
-                          backgroundColor={colors.primary}
-                          borderRadius={24}
-                          paddingHorizontal={8}
-                          paddingVertical={4}
-                          minWidth={24}
-                          alignItems="center"
-                          justifyContent="center"
-                        >
-                          <Text fontSize={12} fontWeight="700" color="white" fontFamily="$body">
-                            {message.unread}
+                      {/* Message Info */}
+                      <YStack flex={1} gap={6}>
+                        <XStack justifyContent="space-between" alignItems="center">
+                          <Text fontSize={16} fontWeight="600" color={colors.text} fontFamily="$body">
+                            {otherUserName}
                           </Text>
-                        </YStack>
-                      )}
+                          {chat.lastMessage && (
+                            <Text fontSize={13} color={colors.textSecondary} fontFamily="$body">
+                              {formatTime(chat.lastMessage.createdAt)}
+                            </Text>
+                          )}
+                        </XStack>
+
+                        <XStack justifyContent="space-between" alignItems="center">
+                          <Text
+                            fontSize={14}
+                            color={colors.textSecondary}
+                            fontFamily="$body"
+                            numberOfLines={1}
+                            flex={1}
+                            marginRight={8}
+                          >
+                            {chat.lastMessage ? chat.lastMessage.text : 'Start a conversation'}
+                          </Text>
+                        </XStack>
+                      </YStack>
                     </XStack>
-                  </YStack>
-                </XStack>
-              ))}
+                  );
+                })
+              )}
             </YStack>
           </YStack>
         </ScrollView>

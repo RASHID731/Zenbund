@@ -91,6 +91,10 @@ export interface Chat {
   id: number;
   user1Id: number;
   user2Id: number;
+  user1Name?: string;
+  user1ProfilePicture?: string;
+  user2Name?: string;
+  user2ProfilePicture?: string;
   createdAt: string;
   updatedAt: string;
   // Populated relationships

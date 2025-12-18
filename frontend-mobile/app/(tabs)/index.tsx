@@ -1,9 +1,10 @@
 import { Text, YStack, XStack, ScrollView } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { Image, FlatList } from 'react-native';
 import { SlidersHorizontal, ChevronDown } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Navbar } from '@/components/navbar';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -13,6 +14,7 @@ import { Offer, Category } from '@/types';
 // Frontend display type (transformed from backend Offer)
 interface ListingDisplay {
   id: number;
+  userId: number;
   name: string;
   category: string;
   price: string;
@@ -33,6 +35,7 @@ function transformOfferToListing(
   const categoryInfo = categoryMap[offer.categoryId] || { name: 'Other', emoji: '📦' };
   return {
     id: offer.id,
+    userId: offer.userId,
     name: offer.title,
     category: categoryInfo.name,
     price: `${offer.price} €`,
@@ -57,46 +60,49 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
 
-  // Fetch categories and offers from API on mount
-  useEffect(() => {
-    async function fetchData() {
-      // Fetch categories
-      setLoadingCategories(true);
-      const categoriesResponse = await apiClient.get<Category[]>('/categories');
-      let categoryMap: Record<number, { name: string; emoji: string }> = {};
+  // Fetch categories and offers whenever screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      async function fetchData() {
+        // Fetch categories
+        setLoadingCategories(true);
+        const categoriesResponse = await apiClient.get<Category[]>('/categories');
+        let categoryMap: Record<number, { name: string; emoji: string }> = {};
 
-      if (categoriesResponse.success && categoriesResponse.data) {
-        setCategories(categoriesResponse.data);
-        // Create category lookup map
-        categoryMap = categoriesResponse.data.reduce((acc, cat) => {
-          acc[cat.id] = { name: cat.name, emoji: cat.emoji };
-          return acc;
-        }, {} as Record<number, { name: string; emoji: string }>);
-      } else {
-        console.error('Failed to fetch categories:', categoriesResponse.message);
-        setCategoriesError(categoriesResponse.message || 'Failed to load categories');
-      }
-      setLoadingCategories(false);
+        if (categoriesResponse.success && categoriesResponse.data) {
+          setCategories(categoriesResponse.data);
+          // Create category lookup map
+          categoryMap = categoriesResponse.data.reduce((acc, cat) => {
+            acc[cat.id] = { name: cat.name, emoji: cat.emoji };
+            return acc;
+          }, {} as Record<number, { name: string; emoji: string }>);
+        } else {
+          console.error('Failed to fetch categories:', categoriesResponse.message);
+          setCategoriesError(categoriesResponse.message || 'Failed to load categories');
+        }
+        setLoadingCategories(false);
 
-      // Fetch offers
-      const offersResponse = await apiClient.get<Offer[]>('/offers');
-      if (offersResponse.success && offersResponse.data) {
-        const transformedListings = offersResponse.data.map(offer =>
-          transformOfferToListing(offer, categoryMap)
-        );
-        setListings(transformedListings);
-      } else {
-        console.error('Failed to fetch offers:', offersResponse.message);
+        // Fetch offers
+        const offersResponse = await apiClient.get<Offer[]>('/offers');
+        if (offersResponse.success && offersResponse.data) {
+          const transformedListings = offersResponse.data.map(offer =>
+            transformOfferToListing(offer, categoryMap)
+          );
+          setListings(transformedListings);
+        } else {
+          console.error('Failed to fetch offers:', offersResponse.message);
+        }
       }
-    }
-    fetchData();
-  }, []);
+      fetchData();
+    }, [])
+  );
 
   const openListingDetail = (listing: ListingDisplay) => {
     router.push({
       pathname: '/listing-detail',
       params: {
         id: listing.id,
+        userId: listing.userId,
         name: listing.name,
         category: listing.category,
         price: listing.price,
