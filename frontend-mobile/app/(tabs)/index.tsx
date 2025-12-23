@@ -1,8 +1,8 @@
 import { Text, YStack, XStack, ScrollView } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
-import { Image, FlatList } from 'react-native';
-import { SlidersHorizontal, ChevronDown } from 'lucide-react-native';
+import { Image, FlatList, Alert } from 'react-native';
+import { SlidersHorizontal, ChevronDown, Heart } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Navbar } from '@/components/navbar';
@@ -10,6 +10,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { apiClient } from '@/lib/api';
 import { Offer, Category } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Frontend display type (transformed from backend Offer)
 interface ListingDisplay {
@@ -21,10 +22,12 @@ interface ListingDisplay {
   emoji: string;
   description: string;
   seller: string;
+  sellerAvatar: string;
   location: string;
   status: string;
   imageUrls: string[];
   createdAt: string;
+  wishlistCount: number;
 }
 
 // Transform backend Offer to frontend ListingDisplay
@@ -41,12 +44,32 @@ function transformOfferToListing(
     price: `${offer.price} €`,
     emoji: categoryInfo.emoji,
     description: offer.description,
-    seller: offer.user?.name || 'Unknown Seller',
+    seller: offer.userName || 'Unknown Seller',
+    sellerAvatar: offer.userProfilePicture || '',
     location: offer.pickupLocation,
     status: offer.status === 'available' ? 'Available' : 'Sold',
     imageUrls: offer.imageUrls || [],
     createdAt: offer.createdAt,
+    wishlistCount: offer.wishlistCount || 0,
   };
+}
+
+// Format timestamp to relative time (e.g., "2h ago", "3d ago")
+function formatTimeAgo(timestamp: string): string {
+  const now = new Date();
+  const created = new Date(timestamp);
+  const diffMs = now.getTime() - created.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 60) {
+    return `${diffMins}m ago`;
+  } else if (diffHours < 24) {
+    return `${diffHours}h ago`;
+  } else {
+    return `${diffDays}d ago`;
+  }
 }
 
 export default function HomeScreen() {
@@ -56,9 +79,86 @@ export default function HomeScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  const [wishlistedItems, setWishlistedItems] = useState<Set<number>>(new Set());
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
+  const { isAuthenticated } = useAuth();
+
+  // Check wishlist status for all items
+  const checkWishlistStatus = async (listingIds: number[]) => {
+    if (!isAuthenticated || listingIds.length === 0) return;
+
+    try {
+      const wishlistStatuses = await Promise.all(
+        listingIds.map(async (id) => {
+          const response = await apiClient.get<{ isWishlisted: boolean }>(`/wishlists/check/${id}`);
+          return { id, isWishlisted: response.success && response.data?.isWishlisted };
+        })
+      );
+
+      const wishlisted = new Set<number>();
+      wishlistStatuses.forEach(({ id, isWishlisted }) => {
+        if (isWishlisted) wishlisted.add(id);
+      });
+      setWishlistedItems(wishlisted);
+    } catch (error) {
+      console.error('Error checking wishlist status:', error);
+    }
+  };
+
+  // Toggle wishlist for a specific item
+  const handleWishlistToggle = async (listingId: number, e?: any) => {
+    if (e) {
+      e.stopPropagation();
+    }
+
+    if (!isAuthenticated) {
+      Alert.alert('Authentication Required', 'Please log in to add items to your wishlist.');
+      return;
+    }
+
+    const isWishlisted = wishlistedItems.has(listingId);
+
+    try {
+      if (isWishlisted) {
+        // Remove from wishlist
+        const response = await apiClient.delete(`/wishlists/offer/${listingId}`);
+        if (response.success) {
+          setWishlistedItems(prev => {
+            const updated = new Set(prev);
+            updated.delete(listingId);
+            return updated;
+          });
+          // Update wishlist count in listings
+          setListings(prev => prev.map(listing =>
+            listing.id === listingId
+              ? { ...listing, wishlistCount: Math.max(0, listing.wishlistCount - 1) }
+              : listing
+          ));
+        } else {
+          Alert.alert('Error', response.message || 'Failed to remove from wishlist.');
+        }
+      } else {
+        // Add to wishlist
+        const response = await apiClient.post('/wishlists', { offerId: listingId });
+        if (response.success) {
+          setWishlistedItems(prev => new Set(prev).add(listingId));
+          // Update wishlist count in listings
+          setListings(prev => prev.map(listing =>
+            listing.id === listingId
+              ? { ...listing, wishlistCount: listing.wishlistCount + 1 }
+              : listing
+          ));
+        } else {
+          Alert.alert('Error', response.message || 'Failed to add to wishlist.');
+        }
+      }
+    } catch (error: any) {
+      console.error('Error toggling wishlist:', error);
+      Alert.alert('Error', error.message || 'Something went wrong. Please try again.');
+    }
+  };
 
   // Fetch categories and offers whenever screen comes into focus
   useFocusEffect(
@@ -89,12 +189,16 @@ export default function HomeScreen() {
             transformOfferToListing(offer, categoryMap)
           );
           setListings(transformedListings);
+
+          // Check wishlist status for all listings
+          const listingIds = transformedListings.map(listing => listing.id);
+          await checkWishlistStatus(listingIds);
         } else {
           console.error('Failed to fetch offers:', offersResponse.message);
         }
       }
       fetchData();
-    }, [])
+    }, [isAuthenticated])
   );
 
   const openListingDetail = (listing: ListingDisplay) => {
@@ -109,6 +213,7 @@ export default function HomeScreen() {
         emoji: listing.emoji,
         description: listing.description,
         seller: listing.seller,
+        sellerAvatar: listing.sellerAvatar,
         location: listing.location,
         status: listing.status,
         imageUrls: JSON.stringify(listing.imageUrls),
@@ -252,8 +357,8 @@ export default function HomeScreen() {
               data={listings}
               numColumns={2}
               scrollEnabled={false}
-              columnWrapperStyle={{ gap: 16 }}
-              contentContainerStyle={{ gap: 16 }}
+              columnWrapperStyle={{ gap: 12 }}
+              contentContainerStyle={{ gap: 12 }}
               keyExtractor={(item) => item.id.toString()}
               ListEmptyComponent={
                 <YStack padding={40} alignItems="center">
@@ -267,24 +372,24 @@ export default function HomeScreen() {
                   flex={1}
                   maxWidth="48%"
                   backgroundColor={colors.card}
-                  borderRadius={20}
-                  borderWidth={1}
-                  borderColor={colors.border}
+                  borderRadius={8}
                   overflow="hidden"
                   pressStyle={{
-                    opacity: 0.9,
-                    scale: 0.97,
+                    opacity: 0.95,
+                    scale: 0.98,
                   }}
                   cursor="pointer"
                   onPress={() => openListingDetail(listing)}
                 >
+                  {/* Image Container with Overlays */}
                   <YStack
-                    height={160}
+                    width="100%"
+                    aspectRatio={1}
                     backgroundColor={colors.backgroundSecondary}
-                    borderBottomColor={colors.border}
-                    borderBottomWidth={1}
                     justifyContent="center"
                     alignItems="center"
+                    position="relative"
+                    borderRadius={8}
                     overflow="hidden"
                   >
                     {listing.imageUrls && listing.imageUrls.length > 0 ? (
@@ -293,20 +398,83 @@ export default function HomeScreen() {
                         style={{
                           width: '100%',
                           height: '100%',
+                          borderRadius: 8,
                         }}
                         resizeMode="cover"
                       />
                     ) : (
-                      <Text fontSize={48}>{listing.emoji}</Text>
+                      <Text fontSize={56}>{listing.emoji}</Text>
+                    )}
+
+                    {/* Wishlist Heart Overlay */}
+                    <XStack
+                      position="absolute"
+                      top={12}
+                      right={12}
+                      backgroundColor="rgba(0, 0, 0, 0.5)"
+                      borderRadius={20}
+                      padding={8}
+                      gap={4}
+                      alignItems="center"
+                      pressStyle={{
+                        opacity: 0.8,
+                        scale: 0.95,
+                      }}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleWishlistToggle(listing.id, e);
+                      }}
+                      cursor="pointer"
+                    >
+                      <Heart
+                        size={16}
+                        color="white"
+                        strokeWidth={2}
+                        fill={wishlistedItems.has(listing.id) ? 'white' : 'transparent'}
+                      />
+                      {listing.wishlistCount > 0 && (
+                        <Text
+                          fontSize={12}
+                          fontWeight="600"
+                          color="white"
+                          fontFamily="$body"
+                        >
+                          {listing.wishlistCount}
+                        </Text>
+                      )}
+                    </XStack>
+
+                    {/* Sold Badge Overlay */}
+                    {listing.status === 'Sold' && (
+                      <YStack
+                        position="absolute"
+                        top={12}
+                        left={12}
+                        backgroundColor="rgba(0, 0, 0, 0.75)"
+                        borderRadius={8}
+                        paddingHorizontal={12}
+                        paddingVertical={6}
+                      >
+                        <Text
+                          fontSize={12}
+                          fontWeight="700"
+                          color="white"
+                          fontFamily="$body"
+                        >
+                          SOLD
+                        </Text>
+                      </YStack>
                     )}
                   </YStack>
-                  <YStack padding={12} gap={6}>
+
+                  {/* Content */}
+                  <YStack paddingVertical={10} paddingHorizontal={6} gap={6}>
                     <Text
                       fontSize={15}
                       fontWeight="600"
                       color={colors.text}
                       fontFamily="$body"
-                      numberOfLines={1}
+                      numberOfLines={2}
                     >
                       {listing.name}
                     </Text>
@@ -315,7 +483,6 @@ export default function HomeScreen() {
                       fontWeight="700"
                       color={colors.primary}
                       fontFamily="$body"
-                      marginTop={2}
                     >
                       {listing.price}
                     </Text>

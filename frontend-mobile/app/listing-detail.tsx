@@ -2,7 +2,7 @@ import { Text, YStack, XStack, ScrollView } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { Image, FlatList, Dimensions, NativeScrollEvent, NativeSyntheticEvent, Alert } from 'react-native';
-import { X, Heart, MessageCircle, MessageSquare, Tag, MapPin } from 'lucide-react-native';
+import { ChevronLeft, Heart, MessageCircle, Tag, MapPin, Calendar } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -29,9 +29,10 @@ export default function ListingDetailModal() {
     name: params.name as string || 'Item',
     category: params.category as string || 'Category',
     price: params.price as string || '$0',
-    description: params.description as string || 'No description available',
+    description: params.description as string || '',
     emoji: params.emoji as string || '📦',
-    seller: params.seller as string || 'Unknown Seller',
+    seller: params.seller as string || '',
+    sellerAvatar: params.sellerAvatar as string || '',
     location: params.location as string || 'Location not specified',
     status: params.status as string || 'Available',
     createdAt: params.createdAt as string || new Date().toISOString(),
@@ -145,38 +146,19 @@ export default function ListingDetailModal() {
     if (diffInDays === 0) return 'Posted today';
     if (diffInDays === 1) return 'Posted 1 day ago';
     if (diffInDays < 7) return `Posted ${diffInDays} days ago`;
-    if (diffInDays < 30) return `Posted ${Math.floor(diffInDays / 7)} weeks ago`;
-    return `Posted ${Math.floor(diffInDays / 30)} months ago`;
+
+    if (diffInDays < 30) {
+      const weeks = Math.floor(diffInDays / 7);
+      return `Posted ${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+    }
+
+    const months = Math.floor(diffInDays / 30);
+    return `Posted ${months} ${months === 1 ? 'month' : 'months'} ago`;
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={[]}>
       <YStack flex={1} backgroundColor={colors.background}>
-        {/* Header with Close Button */}
-        <XStack
-          paddingHorizontal={20}
-          paddingVertical={16}
-          alignItems="center"
-          justifyContent="space-between"
-          borderBottomWidth={1}
-          borderBottomColor={colors.border}
-        >
-          <Text fontSize={18} fontWeight="700" color={colors.text} fontFamily="$body">
-            Item Details
-          </Text>
-          <XStack
-            width={40}
-            height={40}
-            justifyContent="center"
-            alignItems="center"
-            pressStyle={{ opacity: 0.7 }}
-            cursor="pointer"
-            onPress={() => router.back()}
-          >
-            <X size={24} color={colors.text} strokeWidth={2.5} />
-          </XStack>
-        </XStack>
-
         <ScrollView flex={1} showsVerticalScrollIndicator={false}>
           <YStack gap={24} paddingBottom={24}>
             {/* Image Carousel */}
@@ -194,14 +176,14 @@ export default function ListingDetailModal() {
                     renderItem={({ item }) => (
                       <YStack
                         width={SCREEN_WIDTH}
-                        height={300}
+                        height={360}
                         backgroundColor={colors.backgroundSecondary}
                       >
                         <Image
                           source={{ uri: item }}
                           style={{
                             width: SCREEN_WIDTH,
-                            height: 300,
+                            height: 360,
                           }}
                           resizeMode="cover"
                         />
@@ -235,7 +217,7 @@ export default function ListingDetailModal() {
                 </YStack>
               ) : (
                 <YStack
-                  height={300}
+                  height={360}
                   backgroundColor={colors.backgroundSecondary}
                   justifyContent="center"
                   alignItems="center"
@@ -244,58 +226,57 @@ export default function ListingDetailModal() {
                 </YStack>
               )}
 
-              {/* Status Badge */}
-              <XStack
+              {/* Back Button */}
+              <YStack
                 position="absolute"
-                top={16}
-                right={16}
-                backgroundColor={listing.status === 'Available' ? '#10B981' : '#6B7280'}
-                paddingHorizontal={12}
-                paddingVertical={2.67}
-                borderRadius={12}
+                top={56}
+                left={16}
+                backgroundColor="rgba(0, 0, 0, 0.5)"
+                borderRadius={20}
+                padding={8}
+                pressStyle={{
+                  opacity: 0.8,
+                  scale: 0.95,
+                }}
+                cursor="pointer"
+                onPress={() => router.back()}
               >
-                <Text fontSize={12} fontWeight="600" color="white" fontFamily="$body">
-                  {listing.status}
-                </Text>
-              </XStack>
+                <ChevronLeft size={24} color="white" strokeWidth={2.5} />
+              </YStack>
             </YStack>
 
             {/* Content */}
             <YStack paddingHorizontal={20} gap={20}>
               {/* Name, Price, and Timestamp */}
               <YStack gap={8}>
-                <Text fontSize={26} fontWeight="700" color={colors.text} fontFamily="$body">
+                <Text fontSize={24} fontWeight="600" color={colors.text} fontFamily="$body">
                   {listing.name}
                 </Text>
-                <YStack gap={4}>
-                  <Text fontSize={36} fontWeight="700" color={colors.primary} fontFamily="$body">
+                <YStack gap={8}>
+                  <Text fontSize={24} fontWeight="700" color={colors.primary} fontFamily="$body">
                     {listing.price}
                   </Text>
-                  <Text fontSize={13} color={colors.textSecondary} fontFamily="$body">
-                    {getTimeSincePosted(listing.createdAt)}
-                  </Text>
+                  <XStack gap={6} alignItems="center">
+                    <Calendar size={14} color={colors.textSecondary} strokeWidth={2.5} />
+                    <Text fontSize={13} color={colors.textSecondary} fontFamily="$body">
+                      {getTimeSincePosted(listing.createdAt)}
+                    </Text>
+                  </XStack>
                 </YStack>
               </YStack>
 
               {/* Description */}
-              <YStack gap={8}>
-                <XStack gap={8} alignItems="center">
-                  <MessageSquare size={16} color={colors.text} strokeWidth={2.5} />
-                  <Text fontSize={15} fontWeight="600" color={colors.text} fontFamily="$body">
-                    Description
-                  </Text>
-                </XStack>
-                <Text fontSize={14} color={colors.textSecondary} fontFamily="$body" lineHeight={22}>
+              {listing.description && listing.description.trim() !== '' && (
+                <Text fontSize={15} color={colors.textSecondary} fontFamily="$body" lineHeight={22}>
                   {listing.description}
                 </Text>
-              </YStack>
+              )}
 
-              {/* Category & Location - Compact Row */}
-              <XStack gap={16} flexWrap="wrap">
+              {/* Category & Location */}
+              <XStack gap={12}>
                 {/* Category */}
                 <XStack
                   flex={1}
-                  minWidth="45%"
                   gap={8}
                   alignItems="center"
                   backgroundColor={colors.backgroundSecondary}
@@ -304,8 +285,8 @@ export default function ListingDetailModal() {
                   borderRadius={12}
                 >
                   <Tag size={16} color={colors.text} strokeWidth={2.5} />
-                  <YStack flex={1}>
-                    <Text fontSize={12} color={colors.textSecondary} fontFamily="$body">
+                  <YStack flex={1} gap={2}>
+                    <Text fontSize={12} fontWeight="500" color={colors.textSecondary} fontFamily="$body">
                       Category
                     </Text>
                     <Text fontSize={14} fontWeight="600" color={colors.text} fontFamily="$body">
@@ -317,7 +298,6 @@ export default function ListingDetailModal() {
                 {/* Location */}
                 <XStack
                   flex={1}
-                  minWidth="45%"
                   gap={8}
                   alignItems="center"
                   backgroundColor={colors.backgroundSecondary}
@@ -326,9 +306,9 @@ export default function ListingDetailModal() {
                   borderRadius={12}
                 >
                   <MapPin size={16} color={colors.text} strokeWidth={2.5} />
-                  <YStack flex={1}>
-                    <Text fontSize={12} color={colors.textSecondary} fontFamily="$body">
-                      Pickup Location
+                  <YStack flex={1} gap={2}>
+                    <Text fontSize={12} fontWeight="500" color={colors.textSecondary} fontFamily="$body">
+                      Location
                     </Text>
                     <Text fontSize={14} fontWeight="600" color={colors.text} fontFamily="$body">
                       {listing.location}
@@ -338,22 +318,31 @@ export default function ListingDetailModal() {
               </XStack>
 
               {/* Seller Info */}
-              <YStack gap={8}>
-                <Text fontSize={15} fontWeight="600" color={colors.text} fontFamily="$body">
+              <YStack gap={4}>
+                <Text fontSize={12} fontWeight="500" color={colors.textSecondary} fontFamily="$body">
                   Seller
                 </Text>
-                <XStack alignItems="center" gap={12}>
+                <XStack alignItems="center" gap={10}>
                   <YStack
-                    width={40}
-                    height={40}
-                    backgroundColor={colorScheme === 'light' ? '#F5F4FE' : '#38347F'}
-                    borderRadius={20}
+                    width={36}
+                    height={36}
+                    backgroundColor={colors.backgroundSecondary}
+                    borderRadius={18}
                     justifyContent="center"
                     alignItems="center"
+                    overflow="hidden"
                   >
-                    <Text fontSize={20}>👤</Text>
+                    {listing.sellerAvatar ? (
+                      <Image
+                        source={{ uri: listing.sellerAvatar }}
+                        style={{ width: 36, height: 36 }}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text fontSize={18}>👤</Text>
+                    )}
                   </YStack>
-                  <Text fontSize={15} color={colors.text} fontWeight="500" fontFamily="$body">
+                  <Text fontSize={14} color={colors.text} fontWeight="500" fontFamily="$body">
                     {listing.seller}
                   </Text>
                 </XStack>

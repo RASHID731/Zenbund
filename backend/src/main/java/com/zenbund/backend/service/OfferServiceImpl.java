@@ -4,12 +4,15 @@ import com.zenbund.backend.dto.request.CreateOfferRequest;
 import com.zenbund.backend.dto.request.UpdateOfferRequest;
 import com.zenbund.backend.dto.response.OfferResponse;
 import com.zenbund.backend.entity.Offer;
+import com.zenbund.backend.entity.User;
 import com.zenbund.backend.exception.ResourceNotFoundException;
 import com.zenbund.backend.repository.OfferRepository;
+import com.zenbund.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -18,9 +21,25 @@ import java.util.stream.Collectors;
 public class OfferServiceImpl implements OfferService {
 
     private final OfferRepository offerRepository;
+    private final UserRepository userRepository;
 
-    public OfferServiceImpl(OfferRepository offerRepository) {
+    public OfferServiceImpl(OfferRepository offerRepository, UserRepository userRepository) {
         this.offerRepository = offerRepository;
+        this.userRepository = userRepository;
+    }
+
+    // Helper method to enrich OfferResponse with user information
+    private OfferResponse enrichOfferResponseWithUserInfo(Offer offer) {
+        OfferResponse response = OfferResponse.fromEntity(offer);
+
+        // Fetch user details and populate userName and profilePicture
+        Optional<User> user = userRepository.findById(offer.getUserId());
+        user.ifPresent(u -> {
+            response.setUserName(u.getName());
+            response.setUserProfilePicture(u.getProfilePicture());
+        });
+
+        return response;
     }
 
     @Override
@@ -44,7 +63,7 @@ public class OfferServiceImpl implements OfferService {
     @Transactional(readOnly = true)
     public List<OfferResponse> getAllOffers() {
         return offerRepository.findAll().stream()
-                .map(OfferResponse::fromEntity)
+                .map(this::enrichOfferResponseWithUserInfo)
                 .collect(Collectors.toList());
     }
 
@@ -53,7 +72,7 @@ public class OfferServiceImpl implements OfferService {
     public OfferResponse getOfferById(Long id) {
         Offer offer = offerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Offer", "id", id));
-        return OfferResponse.fromEntity(offer);
+        return enrichOfferResponseWithUserInfo(offer);
     }
 
     @Override
@@ -99,7 +118,7 @@ public class OfferServiceImpl implements OfferService {
     @Transactional(readOnly = true)
     public List<OfferResponse> getOffersByUserId(Long userId) {
         return offerRepository.findByUserId(userId).stream()
-                .map(OfferResponse::fromEntity)
+                .map(this::enrichOfferResponseWithUserInfo)
                 .collect(Collectors.toList());
     }
 
@@ -107,7 +126,7 @@ public class OfferServiceImpl implements OfferService {
     @Transactional(readOnly = true)
     public List<OfferResponse> getOffersByCategoryId(Long categoryId) {
         return offerRepository.findByCategoryId(categoryId).stream()
-                .map(OfferResponse::fromEntity)
+                .map(this::enrichOfferResponseWithUserInfo)
                 .collect(Collectors.toList());
     }
 }

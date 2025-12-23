@@ -19,6 +19,8 @@ public class OfferResponse {
     private Integer wishlistCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String userName;
+    private String userProfilePicture;
 
     // Constructors
     public OfferResponse() {
@@ -154,5 +156,21 @@ public class OfferResponse {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public String getUserProfilePicture() {
+        return userProfilePicture;
+    }
+
+    public void setUserProfilePicture(String userProfilePicture) {
+        this.userProfilePicture = userProfilePicture;
     }
 }

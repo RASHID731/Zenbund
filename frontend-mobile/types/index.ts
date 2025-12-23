@@ -37,7 +37,9 @@ export interface Offer {
   wishlistCount: number;
   createdAt: string;
   updatedAt: string;
-  // Populated relationships
+  userName?: string;
+  userProfilePicture?: string;
+  // Populated relationships (not available in backend response)
   user?: User;
   category?: Category;
 }
@@ -50,7 +52,7 @@ export interface Thread {
   memberCount: number;
   createdAt: string;
   updatedAt: string;
-  // Populated relationships
+  // Populated relationships (not available in backend response)
   members?: User[];
   comments?: Comment[];
 }
@@ -64,7 +66,7 @@ export interface ThreadMember {
   // Convenience fields from backend response
   threadName?: string;
   threadEmoji?: string;
-  // Populated relationships
+  // Populated relationships (not available in backend response)
   user?: User;
   thread?: Thread;
 }
@@ -80,7 +82,7 @@ export interface Comment {
   replyCount: number;
   createdAt: string;
   updatedAt: string;
-  // Populated relationships
+  // Populated relationships (not available in backend response)
   user?: User;
   thread?: Thread;
   parent?: Comment;
@@ -97,7 +99,7 @@ export interface Chat {
   user2ProfilePicture?: string;
   createdAt: string;
   updatedAt: string;
-  // Populated relationships
+  // Populated relationships (not available in backend response)
   user1?: User;
   user2?: User;
   messages?: Message[];
@@ -110,7 +112,7 @@ export interface Message {
   senderId: number;
   text: string;
   createdAt: string;
-  // Populated relationships
+  // Populated relationships (not available in backend response)
   sender?: User;
   chat?: Chat;
 }
@@ -120,7 +122,7 @@ export interface Wishlist {
   userId: number;
   offerId: number;
   addedAt: string;
-  // Populated relationships
+  // Populated relationships (not available in backend response)
   user?: User;
   offer?: Offer;
 }
