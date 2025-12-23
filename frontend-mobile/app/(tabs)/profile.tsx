@@ -498,9 +498,6 @@ export default function ProfileScreen() {
                 <Text fontSize={18} fontWeight="700" color={colors.text} fontFamily="$body">
                   My Listings
                 </Text>
-                <Text fontSize={14} fontWeight="600" color={colors.primary} fontFamily="$body">
-                  View All
-                </Text>
               </XStack>
 
               {/* Grid of Listings - Dynamic */}
