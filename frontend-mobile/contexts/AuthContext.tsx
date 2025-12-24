@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import { router } from 'expo-router';
 import { apiClient } from '@/lib/api';
 
 /**
@@ -82,6 +83,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   useEffect(() => {
     checkAuth();
+  }, []);
+
+  /**
+   * Listen for authentication errors (token expired, invalid, etc.)
+   * When auth error occurs, clear user state and redirect to login.
+   */
+  useEffect(() => {
+    const unsubscribe = apiClient.onAuthError(() => {
+      // Clear user state
+      setUser(null);
+
+      // Redirect to login screen
+      router.replace('/login');
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   /**

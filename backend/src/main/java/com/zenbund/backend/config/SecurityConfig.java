@@ -1,5 +1,6 @@
 package com.zenbund.backend.config;
 
+import com.zenbund.backend.security.JwtAuthenticationEntryPoint;
 import com.zenbund.backend.security.JwtAuthenticationFilter;
 import com.zenbund.backend.service.UserService;
 import org.springframework.context.annotation.Bean;
@@ -31,14 +32,19 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final UserService userService;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     /**
      * Constructor with @Lazy on UserService to break circular dependency.
      * Circular dependency: SecurityConfig → UserService → AuthenticationManager → SecurityConfig
      */
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, @Lazy UserService userService) {
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            @Lazy UserService userService,
+            JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.userService = userService;
+        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
     }
 
     /**
@@ -76,6 +82,11 @@ public class SecurityConfig {
                 // Perfect for JWT - each request is independent
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+
+                // Exception handling: Return 401 instead of 403 for unauthorized requests
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                 )
 
                 // Set custom authentication provider (uses BCrypt)

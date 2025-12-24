@@ -15,6 +15,7 @@ export interface ApiResponse<T> {
 
 export class ApiClient {
   private axiosInstance: AxiosInstance;
+  private authErrorListeners: Array<() => void> = [];
 
   constructor(baseURL: string = API_BASE_URL) {
     this.axiosInstance = axios.create({
@@ -57,13 +58,13 @@ export class ApiClient {
     this.axiosInstance.interceptors.response.use(
       (response) => response,
       async (error) => {
-        // If 401 Unauthorized, token is likely expired or invalid
+        // If 401 Unauthorized, token is expired or invalid
         if (error.response?.status === 401) {
-          // Clear the invalid token
+          // Clear the invalid/expired token
           await SecureStore.deleteItemAsync(JWT_TOKEN_KEY);
 
-          // You can emit an event here to redirect to login
-          // or handle it in your AuthContext
+          // Emit event to AuthContext to clear user state and redirect to login
+          this.emitAuthError();
         }
 
         return Promise.reject(error);
@@ -92,6 +93,29 @@ export class ApiClient {
    */
   async clearToken(): Promise<void> {
     await SecureStore.deleteItemAsync(JWT_TOKEN_KEY);
+  }
+
+  /**
+   * Subscribe to authentication errors (token expired, invalid, etc.)
+   * Returns an unsubscribe function.
+   */
+  public onAuthError(callback: () => void): () => void {
+    this.authErrorListeners.push(callback);
+
+    // Return unsubscribe function
+    return () => {
+      this.authErrorListeners = this.authErrorListeners.filter(
+        listener => listener !== callback
+      );
+    };
+  }
+
+  /**
+   * Emit authentication error to all listeners.
+   * Called when 401 Unauthorized response is received.
+   */
+  private emitAuthError(): void {
+    this.authErrorListeners.forEach(listener => listener());
   }
 
   async get<T>(endpoint: string): Promise<ApiResponse<T>> {
