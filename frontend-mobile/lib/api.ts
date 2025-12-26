@@ -130,6 +130,26 @@ export class ApiClient {
     }
   }
 
+  async getWithParams<T>(endpoint: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
+    try {
+      // Build query string from params
+      const queryString = params
+        ? '?' + Object.entries(params)
+            .filter(([_, value]) => value !== null && value !== undefined)
+            .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+            .join('&')
+        : '';
+
+      const response = await this.axiosInstance.get<T>(`${endpoint}${queryString}`);
+      return {
+        data: response.data,
+        success: true,
+      };
+    } catch (error) {
+      return this.handleError<T>(error);
+    }
+  }
+
   async post<T>(endpoint: string, data: any): Promise<ApiResponse<T>> {
     try {
       const response = await this.axiosInstance.post<T>(endpoint, data);

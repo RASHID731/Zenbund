@@ -3,7 +3,9 @@ package com.zenbund.backend.service;
 import com.zenbund.backend.dto.request.CreateOfferRequest;
 import com.zenbund.backend.dto.request.UpdateOfferRequest;
 import com.zenbund.backend.dto.response.OfferResponse;
+import com.zenbund.backend.dto.response.PagedOffersResponse;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface OfferService {
@@ -62,4 +64,24 @@ public interface OfferService {
      * @return list of offers in the category
      */
     List<OfferResponse> getOffersByCategoryId(Long categoryId);
+
+    /**
+     * Get offers with pagination, sorting, and filtering
+     *
+     * @param page page number (0-indexed)
+     * @param limit items per page
+     * @param sortBy sort field: "createdAt", "price", "wishlistCount"
+     * @param sortDirection "ASC" or "DESC"
+     * @param minPrice minimum price filter (optional)
+     * @param maxPrice maximum price filter (optional)
+     * @return paged offers response
+     */
+    PagedOffersResponse getOffersWithFilters(
+            int page,
+            int limit,
+            String sortBy,
+            String sortDirection,
+            BigDecimal minPrice,
+            BigDecimal maxPrice
+    );
 }

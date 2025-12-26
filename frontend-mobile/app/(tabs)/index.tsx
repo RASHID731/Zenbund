@@ -1,15 +1,15 @@
 import { Text, YStack, XStack, ScrollView } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState, useCallback } from 'react';
-import { Image, FlatList, Alert } from 'react-native';
+import { useState, useCallback, useEffect } from 'react';
+import { Image, FlatList, Alert, ActivityIndicator } from 'react-native';
 import { SlidersHorizontal, ChevronDown, Heart } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Navbar } from '@/components/navbar';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { apiClient } from '@/lib/api';
-import { Offer, Category } from '@/types';
+import { Offer, Category, PagedOffersResponse, SortOption, OfferFilters } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Frontend display type (transformed from backend Offer)
@@ -73,17 +73,55 @@ function formatTimeAgo(timestamp: string): string {
 }
 
 export default function HomeScreen() {
-  const [sortBy, setSortBy] = useState('Most Recent');
-  const [showFilterModal, setShowFilterModal] = useState(false);
   const [listings, setListings] = useState<ListingDisplay[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [wishlistedItems, setWishlistedItems] = useState<Set<number>>(new Set());
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Filter state
+  const [filters, setFilters] = useState<OfferFilters>({
+    minPrice: undefined,
+    maxPrice: undefined,
+    sortBy: 'mostRecent',
+  });
+
   const router = useRouter();
+  const params = useLocalSearchParams();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
   const { isAuthenticated } = useAuth();
+
+  // Helper functions for sort mapping
+  const mapSortToBackend = (sort: SortOption): string => {
+    const map: Record<SortOption, string> = {
+      mostRecent: 'createdAt',
+      priceLowToHigh: 'price',
+      priceHighToLow: 'price',
+      mostWishlisted: 'wishlistCount',
+    };
+    return map[sort];
+  };
+
+  const getSortDirection = (sort: SortOption): string => {
+    return sort === 'priceLowToHigh' ? 'ASC' : 'DESC';
+  };
+
+  const getSortLabel = (sort: SortOption): string => {
+    const labels: Record<SortOption, string> = {
+      mostRecent: 'Most Recent',
+      priceLowToHigh: 'Price: Low to High',
+      priceHighToLow: 'Price: High to Low',
+      mostWishlisted: 'Most Wishlisted',
+    };
+    return labels[sort];
+  };
 
   // Check wishlist status for all items
   const checkWishlistStatus = async (listingIds: number[]) => {
@@ -160,46 +198,131 @@ export default function HomeScreen() {
     }
   };
 
-  // Fetch categories and offers whenever screen comes into focus
+  // Fetch categories
+  const fetchCategories = async () => {
+    setLoadingCategories(true);
+    const categoriesResponse = await apiClient.get<Category[]>('/categories');
+
+    if (categoriesResponse.success && categoriesResponse.data) {
+      setCategories(categoriesResponse.data);
+    } else {
+      console.error('Failed to fetch categories:', categoriesResponse.message);
+      setCategoriesError(categoriesResponse.message || 'Failed to load categories');
+    }
+    setLoadingCategories(false);
+  };
+
+  // Fetch offers with pagination - wrapped in useCallback to prevent infinite loops
+  const fetchOffers = useCallback(async (page: number, append: boolean = false) => {
+    try {
+      // Build category map for transformation
+      const categoryMap = categories.reduce((acc, cat) => {
+        acc[cat.id] = { name: cat.name, emoji: cat.emoji };
+        return acc;
+      }, {} as Record<number, { name: string; emoji: string }>);
+
+      const params = {
+        page,
+        limit: 20,
+        sortBy: mapSortToBackend(filters.sortBy),
+        sortDirection: getSortDirection(filters.sortBy),
+        minPrice: filters.minPrice,
+        maxPrice: filters.maxPrice,
+      };
+
+      const response = await apiClient.getWithParams<PagedOffersResponse>('/offers', params);
+
+      if (response.success && response.data) {
+        const transformed = response.data.offers.map(offer =>
+          transformOfferToListing(offer, categoryMap)
+        );
+
+        if (append) {
+          setListings(prev => [...prev, ...transformed]);
+        } else {
+          setListings(transformed);
+        }
+
+        setHasMore(response.data.hasNext);
+        setCurrentPage(response.data.currentPage);
+
+        // Check wishlist status for new items
+        const listingIds = transformed.map(l => l.id);
+        await checkWishlistStatus(listingIds);
+      }
+    } catch (error) {
+      console.error('Failed to fetch offers:', error);
+    }
+  }, [categories, filters.sortBy, filters.minPrice, filters.maxPrice, isAuthenticated]);
+
+  // Load more for infinite scroll
+  const loadMore = useCallback(() => {
+    if (hasMore && !isLoadingMore) {
+      setIsLoadingMore(true);
+      fetchOffers(currentPage + 1, true).finally(() => {
+        setIsLoadingMore(false);
+      });
+    }
+  }, [hasMore, isLoadingMore, currentPage, fetchOffers]);
+
+  // Refresh data
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    setCurrentPage(0);
+    await fetchOffers(0, false);
+    setIsRefreshing(false);
+  }, [fetchOffers]);
+
+  // Fetch categories on mount
   useFocusEffect(
     useCallback(() => {
-      async function fetchData() {
-        // Fetch categories
-        setLoadingCategories(true);
-        const categoriesResponse = await apiClient.get<Category[]>('/categories');
-        let categoryMap: Record<number, { name: string; emoji: string }> = {};
-
-        if (categoriesResponse.success && categoriesResponse.data) {
-          setCategories(categoriesResponse.data);
-          // Create category lookup map
-          categoryMap = categoriesResponse.data.reduce((acc, cat) => {
-            acc[cat.id] = { name: cat.name, emoji: cat.emoji };
-            return acc;
-          }, {} as Record<number, { name: string; emoji: string }>);
-        } else {
-          console.error('Failed to fetch categories:', categoriesResponse.message);
-          setCategoriesError(categoriesResponse.message || 'Failed to load categories');
-        }
-        setLoadingCategories(false);
-
-        // Fetch offers
-        const offersResponse = await apiClient.get<Offer[]>('/offers');
-        if (offersResponse.success && offersResponse.data) {
-          const transformedListings = offersResponse.data.map(offer =>
-            transformOfferToListing(offer, categoryMap)
-          );
-          setListings(transformedListings);
-
-          // Check wishlist status for all listings
-          const listingIds = transformedListings.map(listing => listing.id);
-          await checkWishlistStatus(listingIds);
-        } else {
-          console.error('Failed to fetch offers:', offersResponse.message);
-        }
-      }
-      fetchData();
-    }, [isAuthenticated])
+      fetchCategories();
+    }, [])
   );
+
+  // Fetch offers when categories are loaded or filters change
+  useEffect(() => {
+    if (categories.length > 0) {
+      setCurrentPage(0);
+      fetchOffers(0, false);
+    }
+  }, [filters.sortBy, filters.minPrice, filters.maxPrice, categories.length, fetchOffers]);
+
+  // Listen for route param changes from modals
+  useEffect(() => {
+    let shouldUpdate = false;
+    const newFilters: Partial<OfferFilters> = {};
+
+    // Handle sort parameter
+    if (params.sortBy && params.sortBy !== filters.sortBy) {
+      newFilters.sortBy = params.sortBy as SortOption;
+      shouldUpdate = true;
+    }
+
+    // Handle price parameters
+    const minPriceParam = params.minPrice as string | undefined;
+    const maxPriceParam = params.maxPrice as string | undefined;
+
+    const minPrice = minPriceParam && minPriceParam !== '' ? parseFloat(minPriceParam) : undefined;
+    const maxPrice = maxPriceParam && maxPriceParam !== '' ? parseFloat(maxPriceParam) : undefined;
+
+    const validMinPrice = minPrice !== undefined && !isNaN(minPrice) ? minPrice : undefined;
+    const validMaxPrice = maxPrice !== undefined && !isNaN(maxPrice) ? maxPrice : undefined;
+
+    if (validMinPrice !== filters.minPrice) {
+      newFilters.minPrice = validMinPrice;
+      shouldUpdate = true;
+    }
+
+    if (validMaxPrice !== filters.maxPrice) {
+      newFilters.maxPrice = validMaxPrice;
+      shouldUpdate = true;
+    }
+
+    if (shouldUpdate) {
+      setFilters(prev => ({ ...prev, ...newFilters }));
+    }
+  }, [params.sortBy, params.minPrice, params.maxPrice]);
 
   const openListingDetail = (listing: ListingDisplay) => {
     router.push({
@@ -222,13 +345,51 @@ export default function HomeScreen() {
     });
   };
 
+  // Modal navigation handlers
+  const openSortModal = () => {
+    router.push({
+      pathname: '/sort-modal',
+      params: {
+        currentSort: filters.sortBy,
+        minPrice: filters.minPrice?.toString() || '',
+        maxPrice: filters.maxPrice?.toString() || '',
+      }
+    });
+  };
+
+  const openFilterModal = () => {
+    router.push({
+      pathname: '/filter-modal',
+      params: {
+        minPrice: filters.minPrice?.toString() || '',
+        maxPrice: filters.maxPrice?.toString() || '',
+        currentSort: filters.sortBy,
+      }
+    });
+  };
+
+  const hasActiveFilters = () => {
+    return filters.minPrice !== undefined || filters.maxPrice !== undefined;
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       <YStack flex={1} backgroundColor={colors.background}>
         <Navbar />
 
-        <ScrollView flex={1} showsVerticalScrollIndicator={false}>
-          <YStack paddingHorizontal={20} paddingTop={16} paddingBottom={24} gap={20} backgroundColor={colors.background}>
+        <FlatList
+          data={listings}
+          numColumns={2}
+          columnWrapperStyle={{ gap: 12 }}
+          contentContainerStyle={{ gap: 12, paddingHorizontal: 20, paddingBottom: 24 }}
+          keyExtractor={(item) => item.id.toString()}
+          showsVerticalScrollIndicator={false}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          ListHeaderComponent={
+            <YStack paddingTop={16} paddingBottom={20} gap={20}>
             {/* Category Slider - Horizontal ScrollView */}
             <ScrollView
               horizontal
@@ -315,14 +476,11 @@ export default function HomeScreen() {
                   backgroundColor: colors.backgroundTertiary,
                   scale: 0.98,
                 }}
-                onPress={() => {
-                  console.log('Open sorting options');
-                  // TODO: Implement sorting dropdown
-                }}
+                onPress={openSortModal}
                 cursor="pointer"
               >
                 <Text fontSize={14} fontWeight="500" color={colors.text} fontFamily="$body">
-                  {sortBy}
+                  {getSortLabel(filters.sortBy)}
                 </Text>
                 <ChevronDown size={18} color={colors.icon} strokeWidth={2.5} />
               </XStack>
@@ -331,9 +489,9 @@ export default function HomeScreen() {
               <XStack
                 alignItems="center"
                 justifyContent="center"
-                backgroundColor={colors.backgroundSecondary}
+                backgroundColor={hasActiveFilters() ? colors.primary : colors.backgroundSecondary}
                 borderWidth={1}
-                borderColor={colors.border}
+                borderColor={hasActiveFilters() ? colors.primary : colors.border}
                 borderRadius={20}
                 paddingHorizontal={16}
                 paddingVertical={10}
@@ -341,33 +499,56 @@ export default function HomeScreen() {
                   backgroundColor: colors.backgroundTertiary,
                   scale: 0.98,
                 }}
-                onPress={() => {
-                  console.log('Open filter modal');
-                  setShowFilterModal(true);
-                  // TODO: Implement filter modal
-                }}
+                onPress={openFilterModal}
                 cursor="pointer"
               >
-                <SlidersHorizontal size={20} color={colors.icon} strokeWidth={2.5} />
+                <SlidersHorizontal
+                  size={20}
+                  color={hasActiveFilters() ? 'white' : colors.icon}
+                  strokeWidth={2.5}
+                />
               </XStack>
             </XStack>
-            
-            {/* Offers Grid */}
-            <FlatList
-              data={listings}
-              numColumns={2}
-              scrollEnabled={false}
-              columnWrapperStyle={{ gap: 12 }}
-              contentContainerStyle={{ gap: 12 }}
-              keyExtractor={(item) => item.id.toString()}
-              ListEmptyComponent={
-                <YStack padding={40} alignItems="center">
-                  <Text fontSize={16} color={colors.textSecondary} fontFamily="$body">
-                    No listings available
-                  </Text>
-                </YStack>
-              }
-              renderItem={({ item: listing }) => (
+            </YStack>
+          }
+          ListFooterComponent={
+            isLoadingMore ? (
+              <YStack padding={20} alignItems="center">
+                <ActivityIndicator size="small" color={colors.primary} />
+              </YStack>
+            ) : null
+          }
+          ListEmptyComponent={
+            !isLoadingMore ? (
+              <YStack padding={40} alignItems="center" gap={12}>
+                <Text fontSize={16} color={colors.textSecondary} fontFamily="$body">
+                  {hasActiveFilters() ? 'No offers found' : 'No listings available'}
+                </Text>
+                {hasActiveFilters() && (
+                  <XStack
+                    backgroundColor={colors.primary}
+                    borderRadius={12}
+                    paddingHorizontal={20}
+                    paddingVertical={10}
+                    pressStyle={{ opacity: 0.8, scale: 0.98 }}
+                    cursor="pointer"
+                    onPress={() => {
+                      setFilters(prev => ({
+                        ...prev,
+                        minPrice: undefined,
+                        maxPrice: undefined,
+                      }));
+                    }}
+                  >
+                    <Text fontSize={14} fontWeight="600" color="white" fontFamily="$body">
+                      Clear Filters
+                    </Text>
+                  </XStack>
+                )}
+              </YStack>
+            ) : null
+          }
+          renderItem={({ item: listing }) => (
                 <YStack
                   flex={1}
                   maxWidth="48%"
@@ -488,10 +669,8 @@ export default function HomeScreen() {
                     </Text>
                   </YStack>
                 </YStack>
-              )}
-            />
-          </YStack>
-        </ScrollView>
+          )}
+        />
       </YStack>
     </SafeAreaView>
   );

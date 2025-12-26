@@ -3,6 +3,7 @@ package com.zenbund.backend.controller;
 import com.zenbund.backend.dto.request.CreateOfferRequest;
 import com.zenbund.backend.dto.request.UpdateOfferRequest;
 import com.zenbund.backend.dto.response.OfferResponse;
+import com.zenbund.backend.dto.response.PagedOffersResponse;
 import com.zenbund.backend.service.ImageUploadService;
 import com.zenbund.backend.service.OfferService;
 import jakarta.validation.Valid;
@@ -72,11 +73,40 @@ public class OfferController {
     }
 
     /**
-     * Get all offers
+     * Get all offers with optional pagination, sorting, and filtering
      * GET /api/offers
+     *
+     * Query Parameters:
+     * - page: page number (0-indexed, optional)
+     * - limit: items per page (optional, default: 20, max: 50)
+     * - sortBy: sort field - createdAt, price, wishlistCount (optional, default: createdAt)
+     * - sortDirection: ASC or DESC (optional, default: DESC)
+     * - minPrice: minimum price filter (optional)
+     * - maxPrice: maximum price filter (optional)
      */
     @GetMapping
-    public ResponseEntity<List<OfferResponse>> getAllOffers() {
+    public ResponseEntity<?> getAllOffers(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDirection,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice
+    ) {
+        // If pagination params provided, use new paginated response
+        if (page != null || limit != null) {
+            PagedOffersResponse pagedResponse = offerService.getOffersWithFilters(
+                    page != null ? page : 0,
+                    limit != null ? limit : 20,
+                    sortBy,
+                    sortDirection,
+                    minPrice,
+                    maxPrice
+            );
+            return ResponseEntity.ok(pagedResponse);
+        }
+
+        // Legacy behavior: return all offers for backward compatibility
         List<OfferResponse> offers = offerService.getAllOffers();
         return ResponseEntity.ok(offers);
     }

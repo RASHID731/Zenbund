@@ -126,3 +126,22 @@ export interface Wishlist {
   user?: User;
   offer?: Offer;
 }
+
+// Pagination types
+export interface PagedOffersResponse {
+  offers: Offer[];
+  currentPage: number;
+  pageSize: number;
+  totalOffers: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+export type SortOption = 'mostRecent' | 'priceLowToHigh' | 'priceHighToLow' | 'mostWishlisted';
+
+export interface OfferFilters {
+  minPrice?: number;
+  maxPrice?: number;
+  sortBy: SortOption;
+}

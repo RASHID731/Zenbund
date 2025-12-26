@@ -60,6 +60,8 @@ export default function RootLayout() {
                 <Stack.Screen name="thread-settings" options={{ presentation: 'modal', headerShown: false }} />
                 <Stack.Screen name="add-comment-modal" options={{ presentation: 'modal', headerShown: false }} />
                 <Stack.Screen name="comment-replies" options={{ headerShown: false }} />
+                <Stack.Screen name="filter-modal" options={{ presentation: 'modal', headerShown: false }} />
+                <Stack.Screen name="sort-modal" options={{ presentation: 'modal', headerShown: false }} />
               </Stack>
               <StatusBar style="auto" />
             </ThemeProvider>
