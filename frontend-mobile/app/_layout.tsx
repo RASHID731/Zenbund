@@ -50,7 +50,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="wishlist" options={{ headerShown: false, animation: 'slide_from_left' }} />
                 <Stack.Screen name="listing-detail" options={{ headerShown: false }} />
-                <Stack.Screen name="seller-listing-detail" options={{ presentation: 'modal', headerShown: false }} />
+                <Stack.Screen name="seller-listing-detail" options={{ headerShown: false }} />
                 <Stack.Screen name="chat" options={{ headerShown: false }} />
                 <Stack.Screen name="threads" options={{ headerShown: false }} />
                 <Stack.Screen name="category/[id]" options={{ headerShown: false }} />

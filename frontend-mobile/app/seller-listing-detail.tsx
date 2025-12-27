@@ -1,9 +1,14 @@
+import { useState } from 'react';
 import { Text, YStack, XStack, ScrollView } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, Edit3, CheckCircle, Info, Tag, MapPin } from 'lucide-react-native';
+import { Image, FlatList, Dimensions, NativeScrollEvent, NativeSyntheticEvent, Alert } from 'react-native';
+import { ChevronLeft, Edit3, CheckCircle, Tag, MapPin, Calendar } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { apiClient } from '@/lib/api';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function SellerListingDetailModal() {
   // This is rendered as a modal due to its location in app/
@@ -11,6 +16,7 @@ export default function SellerListingDetailModal() {
   const params = useLocalSearchParams();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Parse listing data from params
   const listing = {
@@ -47,91 +53,151 @@ export default function SellerListingDetailModal() {
     return `Posted ${Math.floor(diffInDays / 30)} months ago`;
   };
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
-      <YStack flex={1} backgroundColor={colors.background}>
-        {/* Header with Close Button */}
-        <XStack
-          paddingHorizontal={20}
-          paddingVertical={16}
-          alignItems="center"
-          justifyContent="space-between"
-          borderBottomWidth={1}
-          borderBottomColor={colors.border}
-        >
-          <Text fontSize={18} fontWeight="700" color={colors.text} fontFamily="$body">
-            Manage Listing
-          </Text>
-          <XStack
-            width={40}
-            height={40}
-            justifyContent="center"
-            alignItems="center"
-            pressStyle={{ opacity: 0.7 }}
-            cursor="pointer"
-            onPress={() => router.back()}
-          >
-            <X size={24} color={colors.text} strokeWidth={2.5} />
-          </XStack>
-        </XStack>
+  // Handle carousel scroll
+  const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const contentOffsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(contentOffsetX / SCREEN_WIDTH);
+    setCurrentImageIndex(index);
+  };
 
+  // Toggle listing status between Available and Sold
+  const handleToggleStatus = async () => {
+    if (!listing.id) {
+      Alert.alert('Error', 'Invalid listing ID');
+      return;
+    }
+
+    const newStatus = listing.status === 'Available' ? 'sold' : 'available';
+
+    try {
+      const response = await apiClient.put(`/offers/${listing.id}/status`, {
+        status: newStatus
+      });
+
+      if (response.success) {
+        Alert.alert(
+          'Success',
+          `Listing marked as ${newStatus === 'available' ? 'Available' : 'Sold'}`,
+          [{ text: 'OK', onPress: () => router.back() }]
+        );
+      } else {
+        Alert.alert('Error', response.message || 'Failed to update status');
+      }
+    } catch (error: any) {
+      console.error('Error toggling status:', error);
+      Alert.alert('Error', error.message || 'Failed to update status');
+    }
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={[]}>
+      <YStack flex={1} backgroundColor={colors.background}>
         <ScrollView flex={1} showsVerticalScrollIndicator={false}>
           <YStack gap={24} paddingBottom={24}>
-            {/* Image */}
-            <YStack
-              height={300}
-              backgroundColor={colors.backgroundSecondary}
-              justifyContent="center"
-              alignItems="center"
-              position="relative"
-            >
-              <Text fontSize={120}>{listing.emoji}</Text>
+            {/* Image Carousel */}
+            <YStack position="relative">
+              {listing.imageUrls && listing.imageUrls.length > 0 ? (
+                <YStack>
+                  <FlatList
+                    data={listing.imageUrls}
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onScroll={onScroll}
+                    scrollEventThrottle={16}
+                    keyExtractor={(item, index) => `image-${index}`}
+                    renderItem={({ item }) => (
+                      <YStack
+                        width={SCREEN_WIDTH}
+                        height={360}
+                        backgroundColor={colors.backgroundSecondary}
+                      >
+                        <Image
+                          source={{ uri: item }}
+                          style={{ width: SCREEN_WIDTH, height: 360 }}
+                          resizeMode="cover"
+                        />
+                      </YStack>
+                    )}
+                  />
 
-              {/* Status Badge */}
-              <XStack
+                  {/* Pagination Dots */}
+                  {listing.imageUrls.length > 1 && (
+                    <XStack
+                      position="absolute"
+                      bottom={12}
+                      alignSelf="center"
+                      gap={4}
+                      backgroundColor="rgba(0,0,0,0.4)"
+                      paddingHorizontal={8}
+                      paddingVertical={2}
+                      borderRadius={16}
+                    >
+                      {listing.imageUrls.map((_: string, index: number) => (
+                        <YStack
+                          key={index}
+                          width={currentImageIndex === index ? 20 : 6}
+                          height={6}
+                          borderRadius={3}
+                          backgroundColor={currentImageIndex === index ? 'white' : 'rgba(255,255,255,0.5)'}
+                        />
+                      ))}
+                    </XStack>
+                  )}
+                </YStack>
+              ) : (
+                <YStack
+                  height={360}
+                  backgroundColor={colors.backgroundSecondary}
+                  justifyContent="center"
+                  alignItems="center"
+                >
+                  <Text fontSize={120}>{listing.emoji}</Text>
+                </YStack>
+              )}
+
+              {/* Back Button - Overlay on Image */}
+              <YStack
                 position="absolute"
-                top={16}
-                right={16}
-                backgroundColor={listing.status === 'Available' ? '#10B981' : '#6B7280'}
-                paddingHorizontal={12}
-                paddingVertical={2.67}
-                borderRadius={12}
+                top={56}
+                left={16}
+                backgroundColor="rgba(0, 0, 0, 0.5)"
+                borderRadius={20}
+                padding={8}
+                pressStyle={{ opacity: 0.8, scale: 0.95 }}
+                cursor="pointer"
+                onPress={() => router.back()}
               >
-                <Text fontSize={12} fontWeight="600" color="white" fontFamily="$body">
-                  {listing.status}
-                </Text>
-              </XStack>
+                <ChevronLeft size={24} color="white" strokeWidth={2.5} />
+              </YStack>
             </YStack>
 
             {/* Content */}
             <YStack paddingHorizontal={20} gap={20}>
               {/* Name, Price, and Timestamp */}
               <YStack gap={8}>
-                <Text fontSize={26} fontWeight="700" color={colors.text} fontFamily="$body">
+                <Text fontSize={24} fontWeight="600" color={colors.text} fontFamily="$body">
                   {listing.name}
                 </Text>
-                <YStack gap={4}>
-                  <Text fontSize={36} fontWeight="700" color={colors.primary} fontFamily="$body">
+                <YStack gap={8}>
+                  <Text fontSize={24} fontWeight="700" color={colors.primary} fontFamily="$body">
                     {listing.price}
                   </Text>
-                  <Text fontSize={13} color={colors.textSecondary} fontFamily="$body">
-                    {getTimeSincePosted(listing.createdAt)}
-                  </Text>
+                  <XStack gap={6} alignItems="center">
+                    <Calendar size={14} color={colors.textSecondary} strokeWidth={2.5} />
+                    <Text fontSize={13} color={colors.textSecondary} fontFamily="$body">
+                      {getTimeSincePosted(listing.createdAt)}
+                    </Text>
+                  </XStack>
                 </YStack>
               </YStack>
 
               {/* Description */}
-              <YStack gap={8}>
-                <XStack gap={8} alignItems="center">
-                  <Info size={16} color={colors.text} strokeWidth={2.5} />
-                  <Text fontSize={15} fontWeight="600" color={colors.text} fontFamily="$body">
-                    Description
-                  </Text>
-                </XStack>
-                <Text fontSize={14} color={colors.textSecondary} fontFamily="$body" lineHeight={22}>
+              {listing.description && listing.description.trim() !== '' && (
+                <Text fontSize={15} color={colors.textSecondary} fontFamily="$body" lineHeight={22}>
                   {listing.description}
                 </Text>
-              </YStack>
+              )}
 
               {/* Category & Location - Compact Row */}
               <XStack gap={16} flexWrap="wrap">
@@ -147,8 +213,8 @@ export default function SellerListingDetailModal() {
                   borderRadius={12}
                 >
                   <Tag size={16} color={colors.text} strokeWidth={2.5} />
-                  <YStack flex={1}>
-                    <Text fontSize={12} color={colors.textSecondary} fontFamily="$body">
+                  <YStack flex={1} gap={2}>
+                    <Text fontSize={12} fontWeight="500" color={colors.textSecondary} fontFamily="$body">
                       Category
                     </Text>
                     <Text fontSize={14} fontWeight="600" color={colors.text} fontFamily="$body">
@@ -169,9 +235,9 @@ export default function SellerListingDetailModal() {
                   borderRadius={12}
                 >
                   <MapPin size={16} color={colors.text} strokeWidth={2.5} />
-                  <YStack flex={1}>
-                    <Text fontSize={12} color={colors.textSecondary} fontFamily="$body">
-                      Pickup Location
+                  <YStack flex={1} gap={2}>
+                    <Text fontSize={12} fontWeight="500" color={colors.textSecondary} fontFamily="$body">
+                      Location
                     </Text>
                     <Text fontSize={14} fontWeight="600" color={colors.text} fontFamily="$body">
                       {listing.location}
@@ -181,22 +247,31 @@ export default function SellerListingDetailModal() {
               </XStack>
 
               {/* Seller Info */}
-              <YStack gap={8}>
-                <Text fontSize={15} fontWeight="600" color={colors.text} fontFamily="$body">
+              <YStack gap={4}>
+                <Text fontSize={12} fontWeight="500" color={colors.textSecondary} fontFamily="$body">
                   Seller
                 </Text>
-                <XStack alignItems="center" gap={12}>
+                <XStack alignItems="center" gap={10}>
                   <YStack
-                    width={40}
-                    height={40}
-                    backgroundColor={colorScheme === 'light' ? '#F5F4FE' : '#38347F'}
-                    borderRadius={20}
+                    width={36}
+                    height={36}
+                    backgroundColor={colors.backgroundSecondary}
+                    borderRadius={18}
                     justifyContent="center"
                     alignItems="center"
+                    overflow="hidden"
                   >
-                    <Text fontSize={20}>👤</Text>
+                    {listing.sellerAvatar ? (
+                      <Image
+                        source={{ uri: listing.sellerAvatar }}
+                        style={{ width: 36, height: 36 }}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text fontSize={18}>👤</Text>
+                    )}
                   </YStack>
-                  <Text fontSize={15} color={colors.text} fontWeight="500" fontFamily="$body">
+                  <Text fontSize={14} color={colors.text} fontWeight="500" fontFamily="$body">
                     {listing.seller}
                   </Text>
                 </XStack>
@@ -231,7 +306,7 @@ export default function SellerListingDetailModal() {
               cursor="pointer"
               onPress={() => {
                 // TODO: Navigate to edit listing form
-                // router.push(`/edit-listing?id=${params.id}`);
+                // router.push(`/edit-listing?id=${listing.id}`);
               }}
             >
               <Edit3 size={20} color={colors.primary} strokeWidth={2.5} />
@@ -251,10 +326,7 @@ export default function SellerListingDetailModal() {
               gap={8}
               pressStyle={{ opacity: 0.8, scale: 0.98 }}
               cursor="pointer"
-              onPress={() => {
-                // TODO: Toggle listing status
-                // handleToggleStatus();
-              }}
+              onPress={handleToggleStatus}
             >
               <CheckCircle size={20} color="white" strokeWidth={2.5} />
               <Text fontSize={15} fontWeight="600" color="white" fontFamily="$body">
