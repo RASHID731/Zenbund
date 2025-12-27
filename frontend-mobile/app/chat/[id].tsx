@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Text, YStack, XStack, Input } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { ArrowLeft, Send, MoreVertical } from 'lucide-react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,6 +23,8 @@ export default function ChatConversationScreen() {
   const colors = Colors[colorScheme || 'light'];
   const { user } = useAuth();
   const flatListRef = useRef<FlatList>(null);
+  const initialMessageCountRef = useRef<number | null>(null);
+  const messagesRef = useRef<ChatMessage[]>([]);
 
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -42,7 +44,14 @@ export default function ChatConversationScreen() {
       setLoading(true);
       const response = await apiClient.get<any>(`/chats/${id}`);
       if (response.success && response.data) {
-        setMessages(response.data.messages || []);
+        const fetchedMessages = response.data.messages || [];
+        setMessages(fetchedMessages);
+        messagesRef.current = fetchedMessages;
+
+        // Track initial message count for empty chat cleanup
+        if (initialMessageCountRef.current === null) {
+          initialMessageCountRef.current = fetchedMessages.length;
+        }
 
         // Determine the other user in the chat
         const isUser1 = response.data.user1Id === user?.userId;
@@ -91,7 +100,11 @@ export default function ChatConversationScreen() {
 
       if (response.success && response.data) {
         const newMessage = response.data;
-        setMessages(prev => [...prev, newMessage]);
+        setMessages(prev => {
+          const updated = [...prev, newMessage];
+          messagesRef.current = updated;
+          return updated;
+        });
 
         // Auto-scroll to bottom
         setTimeout(() => {
@@ -104,6 +117,23 @@ export default function ChatConversationScreen() {
       setInputText(messageText);
     }
   };
+
+  // Auto-delete empty chat when user navigates away
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        // Cleanup when user navigates away
+        // Only delete if chat was initially empty AND still has no messages
+        if (initialMessageCountRef.current === 0 && messagesRef.current.length === 0) {
+          apiClient.delete(`/chats/${id}`)
+            .then(() => console.log(`Empty chat ${id} deleted`))
+            .catch(error => console.error('Failed to delete empty chat:', error));
+        }
+        // Reset for next time
+        initialMessageCountRef.current = null;
+      };
+    }, [id])
+  );
 
   // Render message bubble
   const renderMessage = ({ item }: { item: ChatMessage }) => {
