@@ -96,7 +96,7 @@ export default function HomeScreen() {
   const params = useLocalSearchParams();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   // Helper functions for sort mapping
   const mapSortToBackend = (sort: SortOption): string => {
@@ -325,8 +325,14 @@ export default function HomeScreen() {
   }, [params.sortBy, params.minPrice, params.maxPrice]);
 
   const openListingDetail = (listing: ListingDisplay) => {
+    // Check if user owns this listing
+    const isOwnListing = user && listing.userId === user.userId;
+
+    // Route to seller view if owner, buyer view otherwise
+    const pathname = isOwnListing ? '/seller-listing-detail' : '/listing-detail';
+
     router.push({
-      pathname: '/listing-detail',
+      pathname,
       params: {
         id: listing.id,
         userId: listing.userId,

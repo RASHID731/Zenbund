@@ -14,14 +14,22 @@ export default function SellerListingDetailModal() {
 
   // Parse listing data from params
   const listing = {
+    id: params.id ? parseInt(params.id as string) : undefined,
+    userId: params.userId ? parseInt(params.userId as string) : undefined,
     name: params.name as string || 'Item',
     category: params.category as string || 'Category',
     price: params.price as string || '$0',
-    description: params.description as string || 'No description available',
+    description: params.description as string || '',
     emoji: params.emoji as string || '📦',
     seller: params.seller as string || 'You',
+    sellerAvatar: params.sellerAvatar as string || '',
     location: params.location as string || 'Location not specified',
     status: params.status as string || 'Available',
+    imageUrls: params.imageUrls
+      ? (typeof params.imageUrls === 'string'
+          ? JSON.parse(params.imageUrls)
+          : params.imageUrls)
+      : [],
     createdAt: params.createdAt as string || new Date().toISOString()
   };
 
