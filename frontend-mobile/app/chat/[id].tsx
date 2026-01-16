@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Text, YStack, XStack, Input } from 'tamagui';
+import { Text, YStack, XStack, Input, Button, Sheet } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { FlatList, KeyboardAvoidingView, Platform, Image } from 'react-native';
-import { ArrowLeft, Send, MoreVertical } from 'lucide-react-native';
+import { FlatList, KeyboardAvoidingView, Platform, Image, Pressable } from 'react-native';
+import { ArrowLeft, Send, MoreVertical, Edit2, Trash2 } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -14,6 +14,8 @@ interface ChatMessage {
   senderId: number;
   text: string;
   createdAt: string;
+  editedAt?: string;
+  isEdited?: boolean;
 }
 
 export default function ChatConversationScreen() {
@@ -31,6 +33,12 @@ export default function ChatConversationScreen() {
 
   const [otherUser, setOtherUser] = useState<{ id: number; name: string; profilePicture?: string; isOnline: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Edit/Delete state
+  const [selectedMessageId, setSelectedMessageId] = useState<number | null>(null);
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
+  const [editText, setEditText] = useState('');
 
   // Fetch chat data on mount
   useEffect(() => {
@@ -118,6 +126,79 @@ export default function ChatConversationScreen() {
     }
   };
 
+  // Delete message handler
+  const handleDeleteMessage = async (messageId: number) => {
+    const previousMessages = [...messages];
+    setMessages(prev => prev.filter(msg => msg.id !== messageId));
+    setShowActionMenu(false);
+    setSelectedMessageId(null);
+
+    try {
+      const response = await apiClient.delete(`/messages/${messageId}`);
+      if (!response.success) {
+        setMessages(previousMessages);
+        console.error('Failed to delete message:', response.message);
+      } else {
+        messagesRef.current = messages.filter(msg => msg.id !== messageId);
+      }
+    } catch (error) {
+      setMessages(previousMessages);
+      console.error('Failed to delete message:', error);
+    }
+  };
+
+  // Edit message handlers
+  const handleStartEdit = (messageId: number, currentText: string) => {
+    setEditingMessageId(messageId);
+    setEditText(currentText);
+    setShowActionMenu(false);
+    setSelectedMessageId(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditText('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (editText.trim().length === 0 || !editingMessageId) return;
+
+    const trimmedText = editText.trim();
+    const previousMessages = [...messages];
+
+    // Optimistic update
+    setMessages(prev => prev.map(msg =>
+      msg.id === editingMessageId
+        ? { ...msg, text: trimmedText, isEdited: true, editedAt: new Date().toISOString() }
+        : msg
+    ));
+
+    setEditingMessageId(null);
+    setEditText('');
+
+    try {
+      const response = await apiClient.put<ChatMessage>(
+        `/messages/${editingMessageId}`,
+        { text: trimmedText }
+      );
+
+      if (response.success && response.data) {
+        setMessages(prev => prev.map(msg =>
+          msg.id === editingMessageId ? response.data! : msg
+        ));
+        messagesRef.current = messages.map(msg =>
+          msg.id === editingMessageId ? response.data! : msg
+        );
+      } else {
+        setMessages(previousMessages);
+        console.error('Failed to update message:', response.message);
+      }
+    } catch (error) {
+      setMessages(previousMessages);
+      console.error('Failed to update message:', error);
+    }
+  };
+
   // Auto-delete empty chat when user navigates away
   useFocusEffect(
     useCallback(() => {
@@ -138,6 +219,7 @@ export default function ChatConversationScreen() {
   // Render message bubble
   const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isSent = item.senderId === user?.userId;
+    const isEditing = editingMessageId === item.id;
 
     return (
       <YStack
@@ -145,39 +227,94 @@ export default function ChatConversationScreen() {
         paddingVertical={6}
         alignItems={isSent ? 'flex-end' : 'flex-start'}
       >
-        <YStack
-          backgroundColor={isSent ? colors.primary : colors.backgroundSecondary}
-          borderRadius={20}
-          borderTopLeftRadius={isSent ? 20 : 4}
-          borderTopRightRadius={20}
-          borderBottomLeftRadius={20}
-          borderBottomRightRadius={isSent ? 4 : 20}
-          paddingHorizontal={12}
-          paddingTop={10}
-          paddingBottom={6}
-          maxWidth="75%"
+        <Pressable
+          onLongPress={() => {
+            if (isSent) {
+              setSelectedMessageId(item.id);
+              setShowActionMenu(true);
+            }
+          }}
+          delayLongPress={500}
         >
-          <XStack alignItems="flex-end" gap={8}>
-            <Text
-              fontSize={15}
-              lineHeight={20}
-              color={isSent ? 'white' : colors.text}
-              fontFamily="$body"
-              flexShrink={1}
-              paddingBottom={2}
-            >
-              {item.text}
-            </Text>
-            <Text
-              fontSize={11}
-              color={isSent ? 'rgba(255, 255, 255, 0.7)' : colors.textTertiary}
-              fontFamily="$body"
-              alignSelf="flex-end"
-            >
-              {formatTime(item.createdAt)}
-            </Text>
-          </XStack>
-        </YStack>
+          <YStack
+            backgroundColor={isSent ? colors.primary : colors.backgroundSecondary}
+            borderRadius={20}
+            borderTopLeftRadius={isSent ? 20 : 4}
+            borderTopRightRadius={20}
+            borderBottomLeftRadius={20}
+            borderBottomRightRadius={isSent ? 4 : 20}
+            paddingHorizontal={12}
+            paddingTop={10}
+            paddingBottom={6}
+            maxWidth="75%"
+          >
+            {!isEditing ? (
+              <XStack alignItems="flex-end" gap={8}>
+                <Text
+                  fontSize={15}
+                  lineHeight={20}
+                  color={isSent ? 'white' : colors.text}
+                  fontFamily="$body"
+                  flexShrink={1}
+                  paddingBottom={2}
+                >
+                  {item.text}
+                </Text>
+                <XStack gap={4} alignItems="center">
+                  {item.isEdited && (
+                    <Text
+                      fontSize={11}
+                      color={isSent ? 'rgba(255, 255, 255, 0.6)' : colors.textTertiary}
+                      fontFamily="$body"
+                      fontStyle="italic"
+                    >
+                      edited
+                    </Text>
+                  )}
+                  <Text
+                    fontSize={11}
+                    color={isSent ? 'rgba(255, 255, 255, 0.7)' : colors.textTertiary}
+                    fontFamily="$body"
+                    alignSelf="flex-end"
+                  >
+                    {formatTime(item.createdAt)}
+                  </Text>
+                </XStack>
+              </XStack>
+            ) : (
+              <YStack gap={8} minWidth={200}>
+                <Input
+                  value={editText}
+                  onChangeText={setEditText}
+                  backgroundColor={isSent ? 'rgba(255, 255, 255, 0.2)' : colors.background}
+                  color={isSent ? 'white' : colors.text}
+                  borderWidth={1}
+                  borderColor={isSent ? 'rgba(255, 255, 255, 0.3)' : colors.border}
+                  fontSize={15}
+                  multiline
+                />
+                <XStack gap={8} justifyContent="flex-end">
+                  <Button
+                    size="$2"
+                    onPress={handleCancelEdit}
+                    backgroundColor={isSent ? 'rgba(255, 255, 255, 0.2)' : colors.backgroundTertiary}
+                    color={isSent ? 'white' : colors.text}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="$2"
+                    onPress={handleSaveEdit}
+                    backgroundColor={isSent ? 'white' : colors.primary}
+                    color={isSent ? colors.primary : 'white'}
+                  >
+                    Save
+                  </Button>
+                </XStack>
+              </YStack>
+            )}
+          </YStack>
+        </Pressable>
       </YStack>
     );
   };
@@ -336,6 +473,79 @@ export default function ChatConversationScreen() {
               />
             </XStack>
           </XStack>
+
+          {/* Action Menu Sheet */}
+          <Sheet
+            open={showActionMenu}
+            onOpenChange={(open: boolean) => {
+              setShowActionMenu(open);
+              if (!open) setSelectedMessageId(null);
+            }}
+            snapPoints={[17]}
+            dismissOnSnapToBottom
+            zIndex={100000}
+            animation="medium"
+          >
+            <Sheet.Overlay
+              animation="lazy"
+              enterStyle={{ opacity: 0 }}
+              exitStyle={{ opacity: 0 }}
+              backgroundColor="rgba(0, 0, 0, 0.1)"
+            />
+            <Sheet.Frame
+              backgroundColor={colors.card}
+              borderTopLeftRadius={16}
+              borderTopRightRadius={16}
+              borderWidth={1}
+              borderColor={colors.border}
+            >
+              <YStack gap={0}>
+                {/* Edit Action */}
+                <XStack
+                  paddingVertical={18}
+                  paddingHorizontal={24}
+                  alignItems="center"
+                  gap={12}
+                  pressStyle={{ opacity: 0.7, backgroundColor: colors.backgroundSecondary }}
+                  cursor="pointer"
+                  onPress={() => {
+                    const message = messages.find(m => m.id === selectedMessageId);
+                    if (message) handleStartEdit(message.id, message.text);
+                    setShowActionMenu(false);
+                    setSelectedMessageId(null);
+                  }}
+                  borderBottomWidth={1}
+                  borderBottomColor={colors.border}
+                >
+                  <Edit2 size={20} color={colors.primary} strokeWidth={2} />
+                  <Text fontSize={16} fontWeight="600" color={colors.text} fontFamily="$body">
+                    Edit Message
+                  </Text>
+                </XStack>
+
+                {/* Delete Action */}
+                <XStack
+                  paddingVertical={18}
+                  paddingHorizontal={24}
+                  alignItems="center"
+                  gap={12}
+                  pressStyle={{ opacity: 0.7, backgroundColor: colors.backgroundSecondary }}
+                  cursor="pointer"
+                  onPress={() => {
+                    if (selectedMessageId) handleDeleteMessage(selectedMessageId);
+                    setShowActionMenu(false);
+                    setSelectedMessageId(null);
+                  }}
+                  borderBottomWidth={0}
+                >
+                  <Trash2 size={20} color="#ef4444" strokeWidth={2} />
+                  <Text fontSize={16} fontWeight="600" color="#ef4444" fontFamily="$body">
+                    Delete Message
+                  </Text>
+                </XStack>
+              </YStack>
+            </Sheet.Frame>
+          </Sheet>
         </YStack>
       </KeyboardAvoidingView>
     </SafeAreaView>

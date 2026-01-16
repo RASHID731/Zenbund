@@ -31,6 +31,9 @@ public class Message {
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Column(nullable = true)
+    private Instant editedAt;
+
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chat_id", insertable = false, updatable = false)
@@ -89,6 +92,14 @@ public class Message {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Instant getEditedAt() {
+        return editedAt;
+    }
+
+    public void setEditedAt(Instant editedAt) {
+        this.editedAt = editedAt;
     }
 
     public Chat getChat() {

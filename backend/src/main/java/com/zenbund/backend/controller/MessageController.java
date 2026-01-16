@@ -1,6 +1,7 @@
 package com.zenbund.backend.controller;
 
 import com.zenbund.backend.dto.request.SendMessageRequest;
+import com.zenbund.backend.dto.request.UpdateMessageRequest;
 import com.zenbund.backend.dto.response.MessageResponse;
 import com.zenbund.backend.entity.User;
 import com.zenbund.backend.service.MessageService;
@@ -59,5 +60,18 @@ public class MessageController {
             @AuthenticationPrincipal User user) {
         messageService.deleteMessage(id, user.getId());
         return ResponseEntity.ok(Map.of("message", "Message deleted successfully"));
+    }
+
+    /**
+     * PUT /api/messages/{id}
+     * Update a specific message
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<MessageResponse> updateMessage(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody UpdateMessageRequest request) {
+        MessageResponse response = messageService.updateMessage(id, user.getId(), request);
+        return ResponseEntity.ok(response);
     }
 }

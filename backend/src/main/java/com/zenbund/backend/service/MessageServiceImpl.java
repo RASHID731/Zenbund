@@ -1,6 +1,7 @@
 package com.zenbund.backend.service;
 
 import com.zenbund.backend.dto.request.SendMessageRequest;
+import com.zenbund.backend.dto.request.UpdateMessageRequest;
 import com.zenbund.backend.dto.response.MessageResponse;
 import com.zenbund.backend.entity.Chat;
 import com.zenbund.backend.entity.Message;
@@ -79,5 +80,23 @@ public class MessageServiceImpl implements MessageService {
         }
 
         messageRepository.delete(message);
+    }
+
+    @Override
+    public MessageResponse updateMessage(Long messageId, Long userId, UpdateMessageRequest request) {
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message", "id", messageId));
+
+        // Verify sender owns this message
+        if (!message.getSenderId().equals(userId)) {
+            throw new UnauthorizedException("You can only edit your own messages");
+        }
+
+        // Update message text and set editedAt timestamp
+        message.setText(request.getText());
+        message.setEditedAt(Instant.now());
+
+        Message savedMessage = messageRepository.save(message);
+        return MessageResponse.fromEntity(savedMessage);
     }
 }

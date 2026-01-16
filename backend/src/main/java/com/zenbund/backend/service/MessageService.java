@@ -1,6 +1,7 @@
 package com.zenbund.backend.service;
 
 import com.zenbund.backend.dto.request.SendMessageRequest;
+import com.zenbund.backend.dto.request.UpdateMessageRequest;
 import com.zenbund.backend.dto.response.MessageResponse;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,4 +36,14 @@ public interface MessageService {
      * @param userId    the user ID (for authorization)
      */
     void deleteMessage(Long messageId, Long userId);
+
+    /**
+     * Update a message
+     *
+     * @param messageId the message ID
+     * @param userId    the user ID (for authorization)
+     * @param request   the update message request
+     * @return the updated message response
+     */
+    MessageResponse updateMessage(Long messageId, Long userId, UpdateMessageRequest request);
 }
