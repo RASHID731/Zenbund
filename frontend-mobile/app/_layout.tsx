@@ -56,6 +56,7 @@ export default function RootLayout() {
                 <Stack.Screen name="category/[id]" options={{ headerShown: false }} />
                 <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
                 <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
+                <Stack.Screen name="edit-listing" options={{ headerShown: false }} />
                 <Stack.Screen name="settings" options={{ headerShown: false }} />
                 <Stack.Screen name="thread-settings" options={{ presentation: 'modal', headerShown: false }} />
                 <Stack.Screen name="add-comment-modal" options={{ presentation: 'modal', headerShown: false }} />

@@ -99,6 +99,76 @@ public class ImageUploadService {
     }
 
     /**
+     * Delete an image from Cloudinary using its URL
+     *
+     * @param imageUrl the secure URL of the image to delete
+     */
+    public void deleteImage(String imageUrl) {
+        try {
+            // Extract public_id from URL
+            // Example URL: https://res.cloudinary.com/xxx/image/upload/v123/zenbund/offers/abc123.jpg
+            String publicId = extractPublicIdFromUrl(imageUrl);
+            if (publicId != null) {
+                cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+            }
+        } catch (IOException e) {
+            // Log error but don't throw - we don't want deletion failures to block other operations
+            System.err.println("Failed to delete image from Cloudinary: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Delete multiple images from Cloudinary
+     *
+     * @param imageUrls array of image URLs to delete
+     */
+    public void deleteImages(String[] imageUrls) {
+        if (imageUrls == null || imageUrls.length == 0) {
+            return;
+        }
+        for (String url : imageUrls) {
+            deleteImage(url);
+        }
+    }
+
+    /**
+     * Extract public_id from Cloudinary URL
+     * Example: https://res.cloudinary.com/xxx/image/upload/v123/zenbund/offers/abc123.jpg
+     * Returns: zenbund/offers/abc123
+     */
+    private String extractPublicIdFromUrl(String imageUrl) {
+        if (imageUrl == null || !imageUrl.contains("cloudinary.com")) {
+            return null;
+        }
+
+        try {
+            // Find the part after "/upload/"
+            int uploadIndex = imageUrl.indexOf("/upload/");
+            if (uploadIndex == -1) {
+                return null;
+            }
+
+            String afterUpload = imageUrl.substring(uploadIndex + 8); // 8 = length of "/upload/"
+
+            // Remove version prefix (e.g., "v1234567890/")
+            if (afterUpload.matches("^v\\d+/.*")) {
+                afterUpload = afterUpload.substring(afterUpload.indexOf('/') + 1);
+            }
+
+            // Remove file extension
+            int lastDotIndex = afterUpload.lastIndexOf('.');
+            if (lastDotIndex != -1) {
+                afterUpload = afterUpload.substring(0, lastDotIndex);
+            }
+
+            return afterUpload;
+        } catch (Exception e) {
+            System.err.println("Failed to extract public_id from URL: " + imageUrl);
+            return null;
+        }
+    }
+
+    /**
      * Upload file to Cloudinary
      *
      * @param file image file to upload

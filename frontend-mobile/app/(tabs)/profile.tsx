@@ -1,12 +1,12 @@
 import { Text, YStack, XStack, ScrollView, Image as TamaguiImage, Input } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Navbar } from '@/components/navbar';
-import { Edit3, GraduationCap, BookOpen, Instagram, User as UserIcon, Check, X as XIcon, Pencil, Trash2 } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { Edit3, GraduationCap, BookOpen, Instagram, User as UserIcon, Check, X as XIcon, Pencil, Trash2, Package } from 'lucide-react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/contexts/AuthContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/lib/api';
 import { Image, Linking, Alert } from 'react-native';
 import { Offer } from '@/types';
@@ -22,79 +22,48 @@ export default function ProfileScreen() {
   const [isEditingInstagram, setIsEditingInstagram] = useState(false);
   const [instagramInput, setInstagramInput] = useState('');
 
-  // Fetch user's listings from API
-  useEffect(() => {
-    async function fetchUserListings() {
-      if (!user) return;
+  // Fetch user's listings from API - refetch on screen focus
+  const fetchUserListings = useCallback(async () => {
+    if (!user) return;
 
-      try {
-        setIsLoading(true);
-        const response = await apiClient.get<Offer[]>(`/offers/user/${user.userId}`);
+    try {
+      setIsLoading(true);
+      const response = await apiClient.get<Offer[]>(`/offers/user/${user.userId}`);
 
-        if (response.success && response.data) {
-          setUserListings(response.data);
-        }
-      } catch (error) {
-        console.error('Error fetching user listings:', error);
-      } finally {
-        setIsLoading(false);
+      if (response.success && response.data) {
+        setUserListings(response.data);
       }
+    } catch (error) {
+      console.error('Error fetching user listings:', error);
+    } finally {
+      setIsLoading(false);
     }
-
-    fetchUserListings();
   }, [user]);
 
-  // Sample listings data (fallback)
-  const myListings = [
-    { emoji: '📚', name: 'Calculus Textbook', category: 'Books', price: '$25', description: 'Used calculus textbook in good condition. All chapters included, minimal highlighting.', location: 'Campus Library', status: 'Available' },
-    { emoji: '💻', name: 'MacBook Pro 2019', category: 'Electronics', price: '$800', description: '13-inch MacBook Pro with 256GB storage. Battery health at 85%. Includes charger.', location: 'Dorm Building A', status: 'Available' },
-    { emoji: '🪑', name: 'Study Desk Chair', category: 'Furniture', price: '$40', description: 'Ergonomic office chair perfect for studying. Adjustable height and back support.', location: 'Off-Campus Apartment', status: 'Available' },
-    { emoji: '👕', name: 'University Hoodie', category: 'Clothing', price: '$20', description: 'Official university hoodie, size M. Worn only a few times, like new condition.', location: 'Student Union', status: 'Sold' },
-    { emoji: '📱', name: 'iPhone 12', category: 'Electronics', price: '$450', description: '128GB iPhone 12 in black. Excellent condition with original box and accessories.', location: 'Tech Hub', status: 'Available' },
-    { emoji: '🎮', name: 'Nintendo Switch', category: 'Gaming', price: '$220', description: 'Nintendo Switch with 3 games included. Barely used, perfect condition.', location: 'Recreation Center', status: 'Available' },
-    { emoji: '📖', name: 'Programming Book Set', category: 'Books', price: '$60', description: 'Set of 3 programming books: Python, JavaScript, and Algorithms. Great for CS students.', location: 'CS Building', status: 'Available' },
-    { emoji: '🎧', name: 'Sony Headphones', category: 'Electronics', price: '$85', description: 'Wireless noise-canceling headphones. Great sound quality for studying or music.', location: 'Music Department', status: 'Available' },
-    { emoji: '⚡', name: 'Power Bank', category: 'Electronics', price: '$15', description: '10000mAh portable charger. Fast charging compatible with all devices.', location: 'Engineering Building', status: 'Available' },
-  ];
+  // Refetch listings when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchUserListings();
+    }, [fetchUserListings])
+  );
 
-  const openSellerListingDetail = (listing: any) => {
-    // For placeholder listings (with emoji)
-    if (listing.emoji) {
-      router.push({
-        pathname: '/seller-listing-detail',
-        params: {
-          name: listing.name,
-          category: listing.category,
-          price: listing.price,
-          emoji: listing.emoji,
-          description: listing.description,
-          seller: 'You',
-          location: listing.location,
-          status: listing.status,
-          createdAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-        }
-      });
-    } else {
-      // For real listings from API
-      router.push({
-        pathname: '/seller-listing-detail',
-        params: {
-          id: listing.id,
-          name: listing.title,
-          price: `€${listing.price}`,
-          description: listing.description,
-          seller: 'You',
-          location: listing.pickupLocation,
-          status: listing.status,
-          createdAt: listing.createdAt,
-          imageUrl: listing.imageUrls?.[0] || '',
-        }
-      });
-    }
+  const openSellerListingDetail = (listing: Offer) => {
+    router.push({
+      pathname: '/seller-listing-detail',
+      params: {
+        id: listing.id,
+        name: listing.title,
+        price: `€${listing.price}`,
+        description: listing.description,
+        seller: 'You',
+        location: listing.pickupLocation,
+        status: listing.status,
+        createdAt: listing.createdAt,
+        categoryId: listing.categoryId,
+        imageUrls: JSON.stringify(listing.imageUrls || []),
+      }
+    });
   };
-
-  // Determine which listings to display
-  const displayListings = userListings.length > 0 ? userListings : myListings;
 
   // Handle Instagram link save
   async function handleSaveInstagram() {
@@ -172,7 +141,7 @@ export default function ProfileScreen() {
   }
 
   // Render a single listing item
-  const renderListingItem = (listing: any, index: number) => (
+  const renderListingItem = (listing: Offer, index: number) => (
     <YStack
       key={index}
       flex={1}
@@ -188,9 +157,7 @@ export default function ProfileScreen() {
       onPress={() => openSellerListingDetail(listing)}
       overflow="hidden"
     >
-      {listing.emoji ? (
-        <Text fontSize={48}>{listing.emoji}</Text>
-      ) : listing.imageUrls && listing.imageUrls.length > 0 ? (
+      {listing.imageUrls && listing.imageUrls.length > 0 ? (
         <Image
           source={{ uri: listing.imageUrls[0] }}
           style={{ width: '100%', height: '100%' }}
@@ -502,19 +469,29 @@ export default function ProfileScreen() {
 
               {/* Grid of Listings - Dynamic */}
               <YStack gap={12}>
-                {displayListings.length === 0 ? (
+                {isLoading ? (
                   <Text fontSize={15} color={colors.textSecondary} textAlign="center" paddingVertical={20} fontFamily="$body">
-                    No listings yet
+                    Loading...
                   </Text>
+                ) : userListings.length === 0 ? (
+                  <YStack alignItems="center" justifyContent="center" paddingVertical={40} gap={12}>
+                    <Package size={48} color={colors.textTertiary} strokeWidth={1.5} />
+                    <Text fontSize={16} fontWeight="600" color={colors.text} textAlign="center" fontFamily="$body">
+                      No listings yet
+                    </Text>
+                    <Text fontSize={14} color={colors.textSecondary} textAlign="center" fontFamily="$body" maxWidth={250}>
+                      Start selling by creating your first listing in the Sell tab
+                    </Text>
+                  </YStack>
                 ) : (
                   // Group listings into rows of 3
-                  Array.from({ length: Math.ceil(displayListings.length / 3) }, (_, rowIndex) => (
+                  Array.from({ length: Math.ceil(userListings.length / 3) }, (_, rowIndex) => (
                     <XStack key={rowIndex} gap={12}>
-                      {displayListings.slice(rowIndex * 3, rowIndex * 3 + 3).map((listing, colIndex) =>
+                      {userListings.slice(rowIndex * 3, rowIndex * 3 + 3).map((listing, colIndex) =>
                         renderListingItem(listing, rowIndex * 3 + colIndex)
                       )}
                       {/* Add empty placeholders to fill the row */}
-                      {Array.from({ length: 3 - displayListings.slice(rowIndex * 3, rowIndex * 3 + 3).length }).map((_, i) => (
+                      {Array.from({ length: 3 - userListings.slice(rowIndex * 3, rowIndex * 3 + 3).length }).map((_, i) => (
                         <YStack key={`empty-${i}`} flex={1} />
                       ))}
                     </XStack>

@@ -190,6 +190,22 @@ export class ApiClient {
     }
   }
 
+  async putFormData<T>(endpoint: string, formData: FormData): Promise<ApiResponse<T>> {
+    try {
+      const response = await this.axiosInstance.put<T>(endpoint, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return {
+        data: response.data,
+        success: true,
+      };
+    } catch (error) {
+      return this.handleError<T>(error);
+    }
+  }
+
   async delete<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
     try {
       const response = await this.axiosInstance.delete<T>(endpoint, {

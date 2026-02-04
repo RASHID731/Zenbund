@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Text, YStack, XStack, ScrollView } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image, FlatList, Dimensions, NativeScrollEvent, NativeSyntheticEvent, Alert } from 'react-native';
 import { ChevronLeft, Edit3, CheckCircle, Tag, MapPin, Calendar } from 'lucide-react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { apiClient } from '@/lib/api';
+import { Offer } from '@/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -18,12 +19,13 @@ export default function SellerListingDetailModal() {
   const colors = Colors[colorScheme || 'light'];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // Parse listing data from params
-  const listing = {
+  // Parse initial listing data from params
+  const initialListing = {
     id: params.id ? parseInt(params.id as string) : undefined,
     userId: params.userId ? parseInt(params.userId as string) : undefined,
     name: params.name as string || 'Item',
     category: params.category as string || 'Category',
+    categoryId: params.categoryId ? parseInt(params.categoryId as string) : undefined,
     price: params.price as string || '$0',
     description: params.description as string || '',
     emoji: params.emoji as string || '📦',
@@ -38,6 +40,51 @@ export default function SellerListingDetailModal() {
       : [],
     createdAt: params.createdAt as string || new Date().toISOString()
   };
+
+  // State for listing data (can be updated from API)
+  const [listing, setListing] = useState(initialListing);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch fresh listing data from API
+  const fetchListing = useCallback(async () => {
+    if (!listing.id) return;
+
+    try {
+      setIsLoading(true);
+      const response = await apiClient.get<Offer>(`/offers/${listing.id}`);
+
+      if (response.success && response.data) {
+        // Update listing with fresh data from API
+        setListing({
+          id: response.data.id,
+          userId: response.data.userId,
+          name: response.data.title,
+          category: listing.category, // Keep from params if not in response
+          categoryId: response.data.categoryId,
+          price: `€${response.data.price}`,
+          description: response.data.description,
+          emoji: listing.emoji,
+          seller: 'You',
+          sellerAvatar: listing.sellerAvatar,
+          location: response.data.pickupLocation,
+          status: response.data.status,
+          imageUrls: response.data.imageUrls || [],
+          createdAt: response.data.createdAt,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching listing:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [listing.id]);
+
+  // Refetch when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchListing();
+    }, [fetchListing])
+  );
 
   // Calculate time since posted
   const getTimeSincePosted = (date: string) => {
@@ -67,7 +114,7 @@ export default function SellerListingDetailModal() {
       return;
     }
 
-    const newStatus = listing.status === 'Available' ? 'sold' : 'available';
+    const newStatus = listing.status.toLowerCase() === 'available' ? 'sold' : 'available';
 
     try {
       const response = await apiClient.put(`/offers/${listing.id}/status`, {
@@ -305,8 +352,18 @@ export default function SellerListingDetailModal() {
               pressStyle={{ opacity: 0.7, scale: 0.98, backgroundColor: colors.backgroundSecondary }}
               cursor="pointer"
               onPress={() => {
-                // TODO: Navigate to edit listing form
-                // router.push(`/edit-listing?id=${listing.id}`);
+                router.push({
+                  pathname: '/edit-listing',
+                  params: {
+                    id: listing.id,
+                    title: listing.name,
+                    price: listing.price.replace('€', ''),
+                    categoryId: listing.categoryId,
+                    location: listing.location,
+                    description: listing.description,
+                    imageUrls: JSON.stringify(listing.imageUrls),
+                  }
+                });
               }}
             >
               <Edit3 size={20} color={colors.primary} strokeWidth={2.5} />
@@ -318,7 +375,7 @@ export default function SellerListingDetailModal() {
             {/* Mark as Sold/Available Button */}
             <XStack
               flex={1}
-              backgroundColor={listing.status === 'Available' ? '#10B981' : colors.textSecondary}
+              backgroundColor={listing.status.toLowerCase() === 'available' ? '#10B981' : colors.textSecondary}
               borderRadius={16}
               paddingVertical={10}
               justifyContent="center"
@@ -330,7 +387,7 @@ export default function SellerListingDetailModal() {
             >
               <CheckCircle size={20} color="white" strokeWidth={2.5} />
               <Text fontSize={15} fontWeight="600" color="white" fontFamily="$body">
-                {listing.status === 'Available' ? 'Mark Sold' : 'Mark Available'}
+                {listing.status.toLowerCase() === 'available' ? 'Mark Sold' : 'Mark Available'}
               </Text>
             </XStack>
           </XStack>
