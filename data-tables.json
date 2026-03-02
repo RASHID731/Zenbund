@@ -107,6 +107,7 @@
     "senderId": "number",
     "text": "string",
     "createdAt": "date",
+    "editedAt": "date?",
     "relationships": {
       "sender": "User",
       "chat": "Chat"
