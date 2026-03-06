@@ -8,6 +8,7 @@ import com.zenbund.backend.entity.ThreadMember;
 import com.zenbund.backend.exception.ResourceNotFoundException;
 import com.zenbund.backend.exception.UnauthorizedException;
 import com.zenbund.backend.repository.CommentRepository;
+import com.zenbund.backend.repository.LikeRepository;
 import com.zenbund.backend.repository.ThreadMemberRepository;
 import com.zenbund.backend.repository.ThreadRepository;
 import org.springframework.stereotype.Service;
@@ -21,13 +22,16 @@ import java.util.stream.Collectors;
 public class CommentServiceImpl implements CommentService {
 
     private final CommentRepository commentRepository;
+    private final LikeRepository likeRepository;
     private final ThreadMemberRepository threadMemberRepository;
     private final ThreadRepository threadRepository;
 
     public CommentServiceImpl(CommentRepository commentRepository,
+                             LikeRepository likeRepository,
                              ThreadMemberRepository threadMemberRepository,
                              ThreadRepository threadRepository) {
         this.commentRepository = commentRepository;
+        this.likeRepository = likeRepository;
         this.threadMemberRepository = threadMemberRepository;
         this.threadRepository = threadRepository;
     }
@@ -130,26 +134,32 @@ public class CommentServiceImpl implements CommentService {
         return CommentResponse.fromEntity(updatedComment);
     }
 
+    private void deleteCommentTree(Long commentId) {
+        List<Comment> children = commentRepository.findByParentCommentIdOrderByCreatedAtAsc(commentId);
+        for (Comment child : children) {
+            deleteCommentTree(child.getId());
+        }
+        likeRepository.deleteByCommentId(commentId);
+        commentRepository.deleteById(commentId);
+    }
+
     @Override
     public void deleteComment(Long id, Long userId) {
         Comment comment = commentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found with id: " + id));
 
-        // Verify ownership
         if (!comment.getUserId().equals(userId)) {
             throw new UnauthorizedException("You can only delete your own comments");
         }
 
-        // If this is a parent comment, delete all replies first
         if (comment.getParentCommentId() == null) {
-            commentRepository.deleteByParentCommentId(comment.getId());
-            commentRepository.deleteById(id);
+            deleteCommentTree(id);
         } else {
-            // If this is a reply, update parent's reply count after deletion
             Comment parentComment = commentRepository.findById(comment.getParentCommentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Parent comment not found"));
 
-            commentRepository.deleteById(id);
+            deleteCommentTree(id);
+
             long replyCount = commentRepository.countByParentCommentId(comment.getParentCommentId());
             parentComment.setReplyCount((int) replyCount);
             commentRepository.save(parentComment);

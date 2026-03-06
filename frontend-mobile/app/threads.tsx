@@ -42,6 +42,7 @@ export default function ThreadsScreen() {
   const [activeThreadId, setActiveThreadId] = useState<number | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [likedCommentIds, setLikedCommentIds] = useState<Set<number>>(new Set());
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingText, setEditingText] = useState('');
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -108,11 +109,68 @@ export default function ThreadsScreen() {
 
       if (response.success && response.data) {
         setComments(response.data);
+
+        // Check which parent comments the current user has liked
+        const likeChecks = await Promise.all(
+          response.data.map(c => apiClient.hasLiked(c.id))
+        );
+        const liked = new Set<number>();
+        response.data.forEach((c, i) => {
+          if (likeChecks[i].success && likeChecks[i].data?.liked) {
+            liked.add(c.id);
+          }
+        });
+        setLikedCommentIds(liked);
       }
     } catch (error) {
       console.error('Failed to fetch comments:', error);
     } finally {
       setLoadingComments(false);
+    }
+  };
+
+  const handleToggleLike = async (commentId: number) => {
+    const wasLiked = likedCommentIds.has(commentId);
+
+    // Optimistic update
+    setLikedCommentIds(prev => {
+      const next = new Set(prev);
+      if (wasLiked) next.delete(commentId);
+      else next.add(commentId);
+      return next;
+    });
+    setComments(prev => prev.map(c =>
+      c.id === commentId
+        ? { ...c, likes: wasLiked ? Math.max(0, c.likes - 1) : c.likes + 1 }
+        : c
+    ));
+
+    const response = await apiClient.toggleLike(commentId);
+
+    if (response.success && response.data) {
+      // Reconcile with server values
+      setLikedCommentIds(prev => {
+        const next = new Set(prev);
+        if (response.data!.liked) next.add(commentId);
+        else next.delete(commentId);
+        return next;
+      });
+      setComments(prev => prev.map(c =>
+        c.id === commentId ? { ...c, likes: response.data!.commentLikes } : c
+      ));
+    } else {
+      // Rollback on failure
+      setLikedCommentIds(prev => {
+        const next = new Set(prev);
+        if (wasLiked) next.add(commentId);
+        else next.delete(commentId);
+        return next;
+      });
+      setComments(prev => prev.map(c =>
+        c.id === commentId
+          ? { ...c, likes: wasLiked ? c.likes + 1 : Math.max(0, c.likes - 1) }
+          : c
+      ));
     }
   };
 
@@ -464,9 +522,23 @@ export default function ThreadsScreen() {
                             gap={6}
                             pressStyle={{ opacity: 0.7 }}
                             cursor="pointer"
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              handleToggleLike(comment.id);
+                            }}
                           >
-                            <Heart size={18} color={colors.textSecondary} strokeWidth={2} />
-                            <Text fontSize={13} color={colors.textSecondary} fontWeight="500" fontFamily="$body">
+                            <Heart
+                              size={18}
+                              color={likedCommentIds.has(comment.id) ? colors.primary : colors.textSecondary}
+                              fill={likedCommentIds.has(comment.id) ? colors.primary : 'transparent'}
+                              strokeWidth={2}
+                            />
+                            <Text
+                              fontSize={13}
+                              color={likedCommentIds.has(comment.id) ? colors.primary : colors.textSecondary}
+                              fontWeight="500"
+                              fontFamily="$body"
+                            >
                               {comment.likes}
                             </Text>
                           </XStack>

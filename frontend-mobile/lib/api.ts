@@ -1,6 +1,7 @@
 // API client and utilities
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { LikeToggleResponse } from '@/types';
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080/api';
 
@@ -204,6 +205,14 @@ export class ApiClient {
     } catch (error) {
       return this.handleError<T>(error);
     }
+  }
+
+  async toggleLike(commentId: number): Promise<ApiResponse<LikeToggleResponse>> {
+    return this.post<LikeToggleResponse>('/likes/toggle', { commentId });
+  }
+
+  async hasLiked(commentId: number): Promise<ApiResponse<{ liked: boolean }>> {
+    return this.get<{ liked: boolean }>(`/likes/check?commentId=${commentId}`);
   }
 
   async delete<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {

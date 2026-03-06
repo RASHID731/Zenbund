@@ -127,6 +127,18 @@ export interface Wishlist {
   offer?: Offer;
 }
 
+export interface Like {
+  id: number;
+  userId: number;
+  commentId: number;
+  createdAt: string;
+}
+
+export interface LikeToggleResponse {
+  liked: boolean;
+  commentLikes: number;
+}
+
 // Pagination types
 export interface PagedOffersResponse {
   offers: Offer[];

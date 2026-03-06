@@ -19,7 +19,8 @@
       "comments": "Comment[]",
       "chats": "Chat[]",
       "offers": "Offer[]",
-      "wishlist": "Wishlist[]"
+      "wishlist": "Wishlist[]",
+      "likes": "Like[]"
     }
   },
   "Offer": {
@@ -86,7 +87,8 @@
     "relationships": {
       "thread": "Thread",
       "parent": "Comment?",
-      "replies": "Comment[]"
+      "replies": "Comment[]",
+      "likes": "Like[]"
     }
   },
   "Chat": {
@@ -121,6 +123,16 @@
     "relationships": {
       "user": "User",
       "offer": "Offer"
+    }
+  },
+  "Like": {
+    "id": "number",
+    "userId": "number",
+    "commentId": "number",
+    "createdAt": "date",
+    "relationships": {
+      "user": "User",
+      "comment": "Comment"
     }
   }
 }

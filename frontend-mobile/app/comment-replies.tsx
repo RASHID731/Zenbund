@@ -41,6 +41,7 @@ export default function CommentRepliesScreen() {
   const [parentComment, setParentComment] = useState<Comment | null>(null);
   const [replies, setReplies] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [likedCommentIds, setLikedCommentIds] = useState<Set<number>>(new Set());
   const [replyText, setReplyText] = useState('');
   const [posting, setPosting] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
@@ -68,15 +69,90 @@ export default function CommentRepliesScreen() {
     try {
       // Fetch parent comment (includes nested replies)
       const commentResponse = await apiClient.get<Comment>(`/comments/${commentId}`);
-      if (commentResponse.success) {
-        setParentComment(commentResponse.data);
-        // Extract replies from parent comment response
-        setReplies(commentResponse.data.replies || []);
+      if (commentResponse.success && commentResponse.data) {
+        const parent = commentResponse.data;
+        const fetchedReplies = parent.replies || [];
+        setParentComment(parent);
+        setReplies(fetchedReplies);
+
+        // Check which comments the current user has liked
+        const allComments = [parent, ...fetchedReplies];
+        const likeChecks = await Promise.all(
+          allComments.map(c => apiClient.hasLiked(c.id))
+        );
+        const liked = new Set<number>();
+        allComments.forEach((c, i) => {
+          if (likeChecks[i].success && likeChecks[i].data?.liked) {
+            liked.add(c.id);
+          }
+        });
+        setLikedCommentIds(liked);
       }
     } catch (error) {
       console.error('Failed to fetch comment data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleLike = async (targetCommentId: number) => {
+    const wasLiked = likedCommentIds.has(targetCommentId);
+
+    // Optimistic update
+    setLikedCommentIds(prev => {
+      const next = new Set(prev);
+      if (wasLiked) next.delete(targetCommentId);
+      else next.add(targetCommentId);
+      return next;
+    });
+    if (targetCommentId === Number(commentId)) {
+      setParentComment(prev => prev
+        ? { ...prev, likes: wasLiked ? Math.max(0, prev.likes - 1) : prev.likes + 1 }
+        : null);
+    } else {
+      setReplies(prev => prev.map(r =>
+        r.id === targetCommentId
+          ? { ...r, likes: wasLiked ? Math.max(0, r.likes - 1) : r.likes + 1 }
+          : r
+      ));
+    }
+
+    const response = await apiClient.toggleLike(targetCommentId);
+
+    if (response.success && response.data) {
+      // Reconcile with server values
+      setLikedCommentIds(prev => {
+        const next = new Set(prev);
+        if (response.data!.liked) next.add(targetCommentId);
+        else next.delete(targetCommentId);
+        return next;
+      });
+      if (targetCommentId === Number(commentId)) {
+        setParentComment(prev => prev ? { ...prev, likes: response.data!.commentLikes } : null);
+      } else {
+        setReplies(prev => prev.map(r =>
+          r.id === targetCommentId ? { ...r, likes: response.data!.commentLikes } : r
+        ));
+      }
+    } else {
+      // Rollback on failure
+      setLikedCommentIds(prev => {
+        const next = new Set(prev);
+        if (wasLiked) next.add(targetCommentId);
+        else next.delete(targetCommentId);
+        return next;
+      });
+      if (targetCommentId === Number(commentId)) {
+        setParentComment(prev => prev
+          ? { ...prev, likes: wasLiked ? prev.likes + 1 : Math.max(0, prev.likes - 1) }
+          : null);
+      } else {
+        setReplies(prev => prev.map(r =>
+          r.id === targetCommentId
+            ? { ...r, likes: wasLiked ? r.likes + 1 : Math.max(0, r.likes - 1) }
+            : r
+        ));
+      }
     }
   };
 
@@ -115,7 +191,7 @@ export default function CommentRepliesScreen() {
         text: editingText.trim(),
       });
 
-      if (response.success) {
+      if (response.success && response.data) {
         const updatedComment = response.data;
 
         // Update comment in local state
@@ -355,9 +431,28 @@ export default function CommentRepliesScreen() {
                         {/* Like Count and Reply Count */}
                         {editingCommentId !== parentComment.id && (
                           <XStack gap={24} paddingTop={4}>
-                            <XStack alignItems="center" gap={6}>
-                              <Heart size={18} color={colors.textSecondary} strokeWidth={2} />
-                              <Text fontSize={13} color={colors.textSecondary} fontWeight="500" fontFamily="$body">
+                            <XStack
+                              alignItems="center"
+                              gap={6}
+                              pressStyle={{ opacity: 0.7 }}
+                              cursor="pointer"
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                handleToggleLike(parentComment.id);
+                              }}
+                            >
+                              <Heart
+                                size={18}
+                                color={likedCommentIds.has(parentComment.id) ? colors.primary : colors.textSecondary}
+                                fill={likedCommentIds.has(parentComment.id) ? colors.primary : 'transparent'}
+                                strokeWidth={2}
+                              />
+                              <Text
+                                fontSize={13}
+                                color={likedCommentIds.has(parentComment.id) ? colors.primary : colors.textSecondary}
+                                fontWeight="500"
+                                fontFamily="$body"
+                              >
                                 {parentComment.likes}
                               </Text>
                             </XStack>
@@ -516,9 +611,28 @@ export default function CommentRepliesScreen() {
                             {/* Like Count and Reply Count */}
                             {editingCommentId !== reply.id && (
                               <XStack gap={20}>
-                                <XStack alignItems="center" gap={4}>
-                                  <Heart size={16} color={colors.textSecondary} strokeWidth={2} />
-                                  <Text fontSize={12} color={colors.textSecondary} fontWeight="500" fontFamily="$body">
+                                <XStack
+                                  alignItems="center"
+                                  gap={4}
+                                  pressStyle={{ opacity: 0.7 }}
+                                  cursor="pointer"
+                                  onPress={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleLike(reply.id);
+                                  }}
+                                >
+                                  <Heart
+                                    size={16}
+                                    color={likedCommentIds.has(reply.id) ? colors.primary : colors.textSecondary}
+                                    fill={likedCommentIds.has(reply.id) ? colors.primary : 'transparent'}
+                                    strokeWidth={2}
+                                  />
+                                  <Text
+                                    fontSize={12}
+                                    color={likedCommentIds.has(reply.id) ? colors.primary : colors.textSecondary}
+                                    fontWeight="500"
+                                    fontFamily="$body"
+                                  >
                                     {reply.likes}
                                   </Text>
                                 </XStack>
