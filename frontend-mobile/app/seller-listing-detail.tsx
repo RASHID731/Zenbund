@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
 import { Text, YStack, XStack, ScrollView } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Image, FlatList, Dimensions, NativeScrollEvent, NativeSyntheticEvent, Alert } from 'react-native';
+import { Image, FlatList, Dimensions, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import { useAlert } from '@/contexts/AlertContext';
 import { ChevronLeft, Edit3, CheckCircle, Tag, MapPin, Calendar } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Colors } from '@/constants/theme';
@@ -17,6 +18,7 @@ export default function SellerListingDetailModal() {
   const params = useLocalSearchParams();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
+  const { showAlert } = useAlert();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Parse initial listing data from params
@@ -110,7 +112,7 @@ export default function SellerListingDetailModal() {
   // Toggle listing status between Available and Sold
   const handleToggleStatus = async () => {
     if (!listing.id) {
-      Alert.alert('Error', 'Invalid listing ID');
+      showAlert({ title: 'Error', message: 'Invalid listing ID' });
       return;
     }
 
@@ -122,17 +124,17 @@ export default function SellerListingDetailModal() {
       });
 
       if (response.success) {
-        Alert.alert(
-          'Success',
-          `Listing marked as ${newStatus === 'available' ? 'Available' : 'Sold'}`,
-          [{ text: 'OK', onPress: () => router.back() }]
-        );
+        showAlert({
+          title: 'Success',
+          message: `Listing marked as ${newStatus === 'available' ? 'Available' : 'Sold'}`,
+          buttons: [{ text: 'OK', onPress: () => router.back() }],
+        });
       } else {
-        Alert.alert('Error', response.message || 'Failed to update status');
+        showAlert({ title: 'Error', message: response.message || 'Failed to update status' });
       }
     } catch (error: any) {
       console.error('Error toggling status:', error);
-      Alert.alert('Error', error.message || 'Failed to update status');
+      showAlert({ title: 'Error', message: error.message || 'Failed to update status' });
     }
   };
 

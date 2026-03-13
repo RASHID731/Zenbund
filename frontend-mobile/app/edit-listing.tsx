@@ -3,7 +3,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { X, Camera, Euro, Tag, MapPin, MessageSquare, Image as ImageIcon, ChevronDown, ChevronLeft, Trash2 } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Alert, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useAlert } from '@/contexts/AlertContext';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { Colors } from '@/constants/theme';
@@ -21,6 +22,7 @@ export default function EditListingScreen() {
   const params = useLocalSearchParams();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
+  const { showAlert } = useAlert();
 
   // Parse params
   const listingId = params.id ? parseInt(params.id as string) : undefined;
@@ -93,13 +95,13 @@ export default function EditListingScreen() {
   // Pick images from gallery
   async function pickImages() {
     if (images.length >= 10) {
-      Alert.alert('Maximum Photos', 'You can only add up to 10 photos');
+      showAlert({ title: 'Maximum Photos', message: 'You can only add up to 10 photos' });
       return;
     }
 
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'We need camera roll permissions to select photos');
+      showAlert({ title: 'Permission Denied', message: 'We need camera roll permissions to select photos' });
       return;
     }
 
@@ -122,13 +124,13 @@ export default function EditListingScreen() {
   // Take photo with camera
   async function takePhoto() {
     if (images.length >= 10) {
-      Alert.alert('Maximum Photos', 'You can only add up to 10 photos');
+      showAlert({ title: 'Maximum Photos', message: 'You can only add up to 10 photos' });
       return;
     }
 
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'We need camera permissions to take photos');
+      showAlert({ title: 'Permission Denied', message: 'We need camera permissions to take photos' });
       return;
     }
 
@@ -186,7 +188,7 @@ export default function EditListingScreen() {
   // Handle save
   async function handleSave() {
     if (!listingId) {
-      Alert.alert('Error', 'Invalid listing ID');
+      showAlert({ title: 'Error', message: 'Invalid listing ID' });
       return;
     }
 
@@ -237,15 +239,15 @@ export default function EditListingScreen() {
       const response = await apiClient.putFormData(`/offers/${listingId}`, formData);
 
       if (response.success) {
-        Alert.alert('Success', 'Your listing has been updated!', [
+        showAlert({ title: 'Success', message: 'Your listing has been updated!', buttons: [
           { text: 'OK', onPress: () => router.back() },
-        ]);
+        ] });
       } else {
-        Alert.alert('Error', response.message || 'Failed to update listing. Please try again.');
+        showAlert({ title: 'Error', message: response.message || 'Failed to update listing. Please try again.' });
       }
     } catch (error) {
       console.error('Error updating listing:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      showAlert({ title: 'Error', message: 'An unexpected error occurred. Please try again.' });
     } finally {
       setIsSaving(false);
     }
@@ -253,23 +255,19 @@ export default function EditListingScreen() {
 
   // Handle delete
   function handleDelete() {
-    Alert.alert(
-      'Delete Listing',
-      'Are you sure you want to delete this listing? This action cannot be undone.',
-      [
+    showAlert({
+      title: 'Delete Listing',
+      message: 'Are you sure you want to delete this listing? This action cannot be undone.',
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: confirmDelete,
-        },
-      ]
-    );
+        { text: 'Delete', style: 'destructive', onPress: confirmDelete },
+      ],
+    });
   }
 
   async function confirmDelete() {
     if (!listingId) {
-      Alert.alert('Error', 'Invalid listing ID');
+      showAlert({ title: 'Error', message: 'Invalid listing ID' });
       return;
     }
 
@@ -279,15 +277,15 @@ export default function EditListingScreen() {
       const response = await apiClient.delete(`/offers/${listingId}`);
 
       if (response.success) {
-        Alert.alert('Deleted', 'Your listing has been deleted.', [
+        showAlert({ title: 'Deleted', message: 'Your listing has been deleted.', buttons: [
           { text: 'OK', onPress: () => router.push('/(tabs)/profile') },
-        ]);
+        ] });
       } else {
-        Alert.alert('Error', response.message || 'Failed to delete listing. Please try again.');
+        showAlert({ title: 'Error', message: response.message || 'Failed to delete listing. Please try again.' });
       }
     } catch (error) {
       console.error('Error deleting listing:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      showAlert({ title: 'Error', message: 'An unexpected error occurred. Please try again.' });
     } finally {
       setIsDeleting(false);
     }
@@ -296,14 +294,14 @@ export default function EditListingScreen() {
   // Handle back with unsaved changes check
   function handleBack() {
     if (hasChanges) {
-      Alert.alert(
-        'Discard Changes?',
-        'You have unsaved changes. Are you sure you want to go back?',
-        [
+      showAlert({
+        title: 'Discard Changes?',
+        message: 'You have unsaved changes. Are you sure you want to go back?',
+        buttons: [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Discard', style: 'destructive', onPress: () => router.back() },
-        ]
-      );
+        ],
+      });
     } else {
       router.back();
     }

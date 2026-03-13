@@ -8,13 +8,14 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api';
 import { ThreadMember } from '@/types';
-import { Alert } from 'react-native';
+import { useAlert } from '@/contexts/AlertContext';
 
 export default function ThreadSettingsScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
   const { user } = useAuth();
+  const { showAlert } = useAlert();
 
   const [memberships, setMemberships] = useState<ThreadMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +38,7 @@ export default function ThreadSettingsScreen() {
         setMemberships(response.data);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to load thread settings');
+      showAlert({ title: 'Error', message: 'Failed to load thread settings' });
     } finally {
       setLoading(false);
     }
@@ -60,10 +61,10 @@ export default function ThreadSettingsScreen() {
             : m
         ));
       } else {
-        Alert.alert('Error', response.message || 'Failed to update setting');
+        showAlert({ title: 'Error', message: response.message || 'Failed to update setting' });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update setting');
+      showAlert({ title: 'Error', message: 'Failed to update setting' });
     }
   };
 

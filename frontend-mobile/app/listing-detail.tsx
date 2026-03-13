@@ -1,7 +1,8 @@
 import { Text, YStack, XStack, ScrollView } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
-import { Image, FlatList, Dimensions, NativeScrollEvent, NativeSyntheticEvent, Alert } from 'react-native';
+import { Image, FlatList, Dimensions, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import { useAlert } from '@/contexts/AlertContext';
 import { ChevronLeft, Heart, MessageCircle, Tag, MapPin, Calendar } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors } from '@/constants/theme';
@@ -18,6 +19,7 @@ export default function ListingDetailModal() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
   const { isAuthenticated } = useAuth();
+  const { showAlert } = useAlert();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
@@ -64,12 +66,12 @@ export default function ListingDetailModal() {
   // Toggle wishlist
   const handleWishlistToggle = async () => {
     if (!isAuthenticated) {
-      Alert.alert('Authentication Required', 'Please log in to add items to your wishlist.');
+      showAlert({ title: 'Authentication Required', message: 'Please log in to add items to your wishlist.' });
       return;
     }
 
     if (!listing.id) {
-      Alert.alert('Error', `Invalid listing ID: ${listing.id}`);
+      showAlert({ title: 'Error', message: `Invalid listing ID: ${listing.id}` });
       return;
     }
 
@@ -82,7 +84,7 @@ export default function ListingDetailModal() {
         if (response.success) {
           setIsWishlisted(false);
         } else {
-          Alert.alert('Error', response.message || 'Failed to remove from wishlist.');
+          showAlert({ title: 'Error', message: response.message || 'Failed to remove from wishlist.' });
         }
       } else {
         // Add to wishlist
@@ -90,12 +92,12 @@ export default function ListingDetailModal() {
         if (response.success) {
           setIsWishlisted(true);
         } else {
-          Alert.alert('Error', response.message || 'Failed to add to wishlist.');
+          showAlert({ title: 'Error', message: response.message || 'Failed to add to wishlist.' });
         }
       }
     } catch (error: any) {
       console.error('Error toggling wishlist:', error);
-      Alert.alert('Error', error.message || 'Something went wrong. Please try again.');
+      showAlert({ title: 'Error', message: error.message || 'Something went wrong. Please try again.' });
     } finally {
       setWishlistLoading(false);
     }
@@ -104,12 +106,12 @@ export default function ListingDetailModal() {
   // Message seller - create or get chat
   const handleMessageSeller = async () => {
     if (!isAuthenticated) {
-      Alert.alert('Authentication Required', 'Please log in to message the seller.');
+      showAlert({ title: 'Authentication Required', message: 'Please log in to message the seller.' });
       return;
     }
 
     if (!listing.userId) {
-      Alert.alert('Error', 'Seller information not available.');
+      showAlert({ title: 'Error', message: 'Seller information not available.' });
       return;
     }
 
@@ -121,11 +123,11 @@ export default function ListingDetailModal() {
       if (response.success && response.data) {
         router.push(`/chat/${response.data.id}`);
       } else {
-        Alert.alert('Error', response.message || 'Failed to start chat. Please try again.');
+        showAlert({ title: 'Error', message: response.message || 'Failed to start chat. Please try again.' });
       }
     } catch (error: any) {
       console.error('Failed to create chat:', error);
-      Alert.alert('Error', error.message || 'Failed to start chat. Please try again.');
+      showAlert({ title: 'Error', message: error.message || 'Failed to start chat. Please try again.' });
     }
   };
 

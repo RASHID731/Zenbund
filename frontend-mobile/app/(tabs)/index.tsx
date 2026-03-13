@@ -1,7 +1,7 @@
 import { Text, YStack, XStack, ScrollView } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useCallback, useEffect } from 'react';
-import { Image, FlatList, Alert, ActivityIndicator } from 'react-native';
+import { Image, FlatList, ActivityIndicator } from 'react-native';
 import { SlidersHorizontal, ChevronDown, Heart } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -11,6 +11,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { apiClient } from '@/lib/api';
 import { Offer, Category, PagedOffersResponse, SortOption, OfferFilters } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAlert } from '@/contexts/AlertContext';
 
 // Frontend display type (transformed from backend Offer)
 interface ListingDisplay {
@@ -97,6 +98,7 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
   const { isAuthenticated, user } = useAuth();
+  const { showAlert } = useAlert();
 
   // Helper functions for sort mapping
   const mapSortToBackend = (sort: SortOption): string => {
@@ -152,7 +154,7 @@ export default function HomeScreen() {
     }
 
     if (!isAuthenticated) {
-      Alert.alert('Authentication Required', 'Please log in to add items to your wishlist.');
+      showAlert({ title: 'Authentication Required', message: 'Please log in to add items to your wishlist.' });
       return;
     }
 
@@ -175,7 +177,7 @@ export default function HomeScreen() {
               : listing
           ));
         } else {
-          Alert.alert('Error', response.message || 'Failed to remove from wishlist.');
+          showAlert({ title: 'Error', message: response.message || 'Failed to remove from wishlist.' });
         }
       } else {
         // Add to wishlist
@@ -189,12 +191,12 @@ export default function HomeScreen() {
               : listing
           ));
         } else {
-          Alert.alert('Error', response.message || 'Failed to add to wishlist.');
+          showAlert({ title: 'Error', message: response.message || 'Failed to add to wishlist.' });
         }
       }
     } catch (error: any) {
       console.error('Error toggling wishlist:', error);
-      Alert.alert('Error', error.message || 'Something went wrong. Please try again.');
+      showAlert({ title: 'Error', message: error.message || 'Something went wrong. Please try again.' });
     }
   };
 

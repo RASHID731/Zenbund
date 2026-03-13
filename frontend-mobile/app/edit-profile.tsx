@@ -3,7 +3,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { X, User, GraduationCap, BookOpen, MessageSquare, Calendar, Camera } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { Alert, ActivityIndicator } from 'react-native';
+import { ActivityIndicator } from 'react-native';
+import { useAlert } from '@/contexts/AlertContext';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { Colors } from '@/constants/theme';
@@ -16,6 +17,7 @@ export default function EditProfileScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
   const { user, updateProfile } = useAuth();
+  const { showAlert } = useAlert();
 
   // State for form fields - initialize with user data
   const [profilePictureUri, setProfilePictureUri] = useState<string | null>(user?.profilePicture || null);
@@ -68,7 +70,7 @@ export default function EditProfileScreen() {
     // Request permission
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'We need camera roll permissions to select a photo');
+      showAlert({ title: 'Permission Denied', message: 'We need camera roll permissions to select a photo' });
       return;
     }
 
@@ -108,13 +110,13 @@ export default function EditProfileScreen() {
           // Update local state with the Cloudinary URL
           setProfilePictureUri((response.data as any).url);
           setHasChanges(true);
-          Alert.alert('Success', 'Profile picture uploaded! Remember to save changes.');
+          showAlert({ title: 'Success', message: 'Profile picture uploaded! Remember to save changes.' });
         } else {
-          Alert.alert('Error', 'Failed to upload profile picture');
+          showAlert({ title: 'Error', message: 'Failed to upload profile picture' });
         }
       } catch (error) {
         console.error('Upload error:', error);
-        Alert.alert('Error', 'Failed to upload profile picture. Please try again.');
+        showAlert({ title: 'Error', message: 'Failed to upload profile picture. Please try again.' });
       } finally {
         setIsUploading(false);
       }
@@ -145,18 +147,15 @@ export default function EditProfileScreen() {
         // Update user context with new data
         await updateProfile(response.data as any);
 
-        Alert.alert('Success', 'Profile updated successfully!', [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ]);
+        showAlert({ title: 'Success', message: 'Profile updated successfully!', buttons: [
+          { text: 'OK', onPress: () => router.back() },
+        ] });
       } else {
-        Alert.alert('Error', response.message || 'Failed to update profile');
+        showAlert({ title: 'Error', message: response.message || 'Failed to update profile' });
       }
     } catch (error) {
       console.error('Save error:', error);
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
+      showAlert({ title: 'Error', message: 'Failed to update profile. Please try again.' });
     } finally {
       setIsSaving(false);
     }
@@ -167,21 +166,14 @@ export default function EditProfileScreen() {
    */
   function handleBack() {
     if (hasChanges) {
-      Alert.alert(
-        'Discard Changes?',
-        'You have unsaved changes. Are you sure you want to go back?',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Discard',
-            style: 'destructive',
-            onPress: () => router.back(),
-          },
-        ]
-      );
+      showAlert({
+        title: 'Discard Changes?',
+        message: 'You have unsaved changes. Are you sure you want to go back?',
+        buttons: [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Discard', style: 'destructive', onPress: () => router.back() },
+        ],
+      });
     } else {
       router.back();
     }

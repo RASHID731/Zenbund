@@ -8,7 +8,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/lib/api';
-import { Image, Linking, Alert } from 'react-native';
+import { useAlert } from '@/contexts/AlertContext';
+import { Image, Linking } from 'react-native';
 import { Offer } from '@/types';
 
 export default function ProfileScreen() {
@@ -16,6 +17,7 @@ export default function ProfileScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
   const { user, updateProfile } = useAuth();
+  const { showAlert } = useAlert();
 
   const [userListings, setUserListings] = useState<Offer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -68,7 +70,7 @@ export default function ProfileScreen() {
   // Handle Instagram link save
   async function handleSaveInstagram() {
     if (!instagramInput.trim()) {
-      Alert.alert('Error', 'Please enter an Instagram username or link');
+      showAlert({ title: 'Error', message: 'Please enter an Instagram username or link' });
       return;
     }
 
@@ -82,11 +84,11 @@ export default function ProfileScreen() {
         setIsEditingInstagram(false);
         setInstagramInput('');
       } else {
-        Alert.alert('Error', 'Failed to update Instagram link');
+        showAlert({ title: 'Error', message: 'Failed to update Instagram link' });
       }
     } catch (error) {
       console.error('Error updating Instagram:', error);
-      Alert.alert('Error', 'Failed to update Instagram link');
+      showAlert({ title: 'Error', message: 'Failed to update Instagram link' });
     }
   }
 
@@ -98,14 +100,11 @@ export default function ProfileScreen() {
 
   // Handle delete Instagram link
   async function handleDeleteInstagram() {
-    Alert.alert(
-      'Remove Instagram Link',
-      'Are you sure you want to remove your Instagram link?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+    showAlert({
+      title: 'Remove Instagram Link',
+      message: 'Are you sure you want to remove your Instagram link?',
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
           style: 'destructive',
@@ -120,16 +119,16 @@ export default function ProfileScreen() {
                 setIsEditingInstagram(false);
                 setInstagramInput('');
               } else {
-                Alert.alert('Error', 'Failed to remove Instagram link');
+                showAlert({ title: 'Error', message: 'Failed to remove Instagram link' });
               }
             } catch (error) {
               console.error('Error removing Instagram:', error);
-              Alert.alert('Error', 'Failed to remove Instagram link');
+              showAlert({ title: 'Error', message: 'Failed to remove Instagram link' });
             }
           },
         },
-      ]
-    );
+      ],
+    });
   }
 
   // Handle start editing Instagram

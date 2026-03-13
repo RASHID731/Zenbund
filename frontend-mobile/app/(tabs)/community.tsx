@@ -7,15 +7,16 @@ import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAlert } from '@/contexts/AlertContext';
 import { apiClient } from '@/lib/api';
 import { Thread, ThreadMember } from '@/types';
-import { Alert } from 'react-native';
 
 export default function CommunityScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
   const router = useRouter();
   const { user } = useAuth();
+  const { showAlert } = useAlert();
 
   const [threads, setThreads] = useState<Thread[]>([]);
   const [memberships, setMemberships] = useState<ThreadMember[]>([]);
@@ -45,7 +46,7 @@ export default function CommunityScreen() {
         }
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to load threads');
+      showAlert({ title: 'Error', message: 'Failed to load threads' });
     } finally {
       setLoading(false);
     }
@@ -71,10 +72,10 @@ export default function CommunityScreen() {
             : t
         ));
       } else {
-        Alert.alert('Error', response.message || 'Failed to join thread');
+        showAlert({ title: 'Error', message: response.message || 'Failed to join thread' });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to join thread');
+      showAlert({ title: 'Error', message: 'Failed to join thread' });
     }
   };
 
@@ -85,10 +86,10 @@ export default function CommunityScreen() {
     const membership = memberships.find(m => m.threadId === threadId);
     if (!membership) return;
 
-    Alert.alert(
-      'Leave Thread',
-      'Are you sure you want to leave this thread?',
-      [
+    showAlert({
+      title: 'Leave Thread',
+      message: 'Are you sure you want to leave this thread?',
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Leave',
@@ -98,25 +99,22 @@ export default function CommunityScreen() {
               const response = await apiClient.delete(`/thread-members/${membership.id}`);
 
               if (response.success) {
-                // Remove from memberships
                 setMemberships(memberships.filter(m => m.id !== membership.id));
-
-                // Update thread's member count
                 setThreads(threads.map(t =>
                   t.id === threadId
                     ? { ...t, memberCount: Math.max(0, t.memberCount - 1) }
                     : t
                 ));
               } else {
-                Alert.alert('Error', response.message || 'Failed to leave thread');
+                showAlert({ title: 'Error', message: response.message || 'Failed to leave thread' });
               }
             } catch (error) {
-              Alert.alert('Error', 'Failed to leave thread');
+              showAlert({ title: 'Error', message: 'Failed to leave thread' });
             }
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   const navigateToThreads = () => {

@@ -1,13 +1,14 @@
 import { Text, YStack, XStack, ScrollView } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
-import { Image, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import { Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { Heart, ArrowLeft, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { apiClient } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAlert } from '@/contexts/AlertContext';
 
 interface WishlistItem {
   id: number;
@@ -29,6 +30,7 @@ export default function Wishlist() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
   const { isAuthenticated } = useAuth();
+  const { showAlert } = useAlert();
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -65,10 +67,10 @@ export default function Wishlist() {
 
   // Remove item from wishlist
   const handleRemoveItem = async (wishlistId: number, title: string) => {
-    Alert.alert(
-      'Remove from Wishlist',
-      `Are you sure you want to remove "${title}" from your wishlist?`,
-      [
+    showAlert({
+      title: 'Remove from Wishlist',
+      message: `Are you sure you want to remove "${title}" from your wishlist?`,
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
@@ -79,16 +81,16 @@ export default function Wishlist() {
               if (response.success) {
                 setWishlistItems(prev => prev.filter(item => item.id !== wishlistId));
               } else {
-                Alert.alert('Error', response.message || 'Failed to remove item from wishlist.');
+                showAlert({ title: 'Error', message: response.message || 'Failed to remove item from wishlist.' });
               }
             } catch (error: any) {
               console.error('Error removing from wishlist:', error);
-              Alert.alert('Error', error.message || 'Something went wrong. Please try again.');
+              showAlert({ title: 'Error', message: error.message || 'Something went wrong. Please try again.' });
             }
-          }
-        }
-      ]
-    );
+          },
+        },
+      ],
+    });
   };
 
   // Navigate to listing detail

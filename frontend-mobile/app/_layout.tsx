@@ -11,6 +11,7 @@ import { useEffect } from 'react';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import config from '../tamagui.config';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { AlertProvider } from '@/contexts/AlertContext';
 
 // Prevent splash screen from hiding automatically
 SplashScreen.preventAutoHideAsync();
@@ -42,6 +43,7 @@ export default function RootLayout() {
       <AuthProvider>
         <TamaguiProvider config={config} defaultTheme={colorScheme || 'light'}>
           <PortalProvider>
+            <AlertProvider>
             <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
               <Stack>
                 <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -66,6 +68,7 @@ export default function RootLayout() {
               </Stack>
               <StatusBar style="auto" />
             </ThemeProvider>
+            </AlertProvider>
           </PortalProvider>
         </TamaguiProvider>
       </AuthProvider>

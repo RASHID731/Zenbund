@@ -3,10 +3,11 @@ import { Text, YStack, XStack, ScrollView, Input, Sheet } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Heart, ArrowUp, MessageCircle, Edit2, Trash2, Check, X as XIcon, MoreVertical } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAlert } from '@/contexts/AlertContext';
 import { apiClient } from '@/lib/api';
 import { Comment } from '@/types';
 
@@ -37,6 +38,7 @@ export default function CommentRepliesScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
   const { user } = useAuth();
+  const { showAlert } = useAlert();
 
   const [parentComment, setParentComment] = useState<Comment | null>(null);
   const [replies, setReplies] = useState<Comment[]>([]);
@@ -210,7 +212,7 @@ export default function CommentRepliesScreen() {
       }
     } catch (error) {
       console.error('Failed to update comment:', error);
-      Alert.alert('Error', 'Failed to update comment. Please try again.');
+      showAlert({ title: 'Error', message: 'Failed to update comment. Please try again.' });
     }
   };
 
@@ -220,10 +222,10 @@ export default function CommentRepliesScreen() {
   };
 
   const handleDeleteComment = (targetCommentId: number) => {
-    Alert.alert(
-      'Delete Comment',
-      'Are you sure you want to delete this comment? This action cannot be undone.',
-      [
+    showAlert({
+      title: 'Delete Comment',
+      message: 'Are you sure you want to delete this comment? This action cannot be undone.',
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
@@ -233,17 +235,16 @@ export default function CommentRepliesScreen() {
               const response = await apiClient.delete(`/comments/${targetCommentId}`);
 
               if (response.success) {
-                // Refresh data to get updated state
                 await fetchCommentData();
               }
             } catch (error) {
               console.error('Failed to delete comment:', error);
-              Alert.alert('Error', 'Failed to delete comment. Please try again.');
+              showAlert({ title: 'Error', message: 'Failed to delete comment. Please try again.' });
             }
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   const showCommentActions = (comment: Comment) => {

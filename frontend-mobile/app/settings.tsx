@@ -23,10 +23,10 @@ import {
   LogOut
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { Alert } from 'react-native';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAlert } from '@/contexts/AlertContext';
 
 interface SettingsItemProps {
   icon: any;
@@ -122,6 +122,7 @@ export default function SettingsScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
   const { logout, deleteAccount } = useAuth();
+  const { showAlert } = useAlert();
 
   // Toggle states
   const [pushNotifications, setPushNotifications] = useState(true);
@@ -129,14 +130,11 @@ export default function SettingsScreen() {
   const [darkMode, setDarkMode] = useState(colorScheme === 'dark');
 
   function handleLogout() {
-    Alert.alert(
-      'Log Out',
-      'Are you sure you want to log out?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+    showAlert({
+      title: 'Log Out',
+      message: 'Are you sure you want to log out?',
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Log Out',
           style: 'destructive',
@@ -145,65 +143,56 @@ export default function SettingsScreen() {
               await logout();
               router.replace('/login');
             } catch (error) {
-              Alert.alert('Error', 'Failed to log out. Please try again.');
+              showAlert({ title: 'Error', message: 'Failed to log out. Please try again.' });
             }
           },
         },
-      ]
-    );
+      ],
+    });
   }
 
   function handleDeleteAccount() {
-    Alert.alert(
-      'Delete Account',
-      'This action cannot be undone. All your data will be permanently deleted.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+    showAlert({
+      title: 'Delete Account',
+      message: 'This action cannot be undone. All your data will be permanently deleted.',
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            // Prompt for password confirmation
-            Alert.prompt(
-              'Confirm Password',
-              'Please enter your password to confirm account deletion:',
-              [
-                {
-                  text: 'Cancel',
-                  style: 'cancel',
-                },
-                {
-                  text: 'Delete Account',
-                  style: 'destructive',
-                  onPress: async (password?: string) => {
-                    if (!password) {
-                      Alert.alert('Error', 'Password is required to delete your account.');
-                      return;
+            showAlert({
+              title: 'Confirm Password',
+              message: 'Please enter your password to confirm account deletion:',
+              input: {
+                placeholder: 'Password',
+                secureTextEntry: true,
+                onSubmit: async (password: string) => {
+                  if (!password) {
+                    showAlert({ title: 'Error', message: 'Password is required to delete your account.' });
+                    return;
+                  }
+                  try {
+                    const result = await deleteAccount(password);
+                    if (result.success) {
+                      router.replace('/login');
+                    } else {
+                      showAlert({ title: 'Error', message: result.message || 'Failed to delete account' });
                     }
-
-                    try {
-                      const result = await deleteAccount(password);
-
-                      if (result.success) {
-                        router.replace('/login');
-                      } else {
-                        Alert.alert('Error', result.message || 'Failed to delete account');
-                      }
-                    } catch (error) {
-                      Alert.alert('Error', 'Failed to delete account. Please try again.');
-                    }
-                  },
+                  } catch (error) {
+                    showAlert({ title: 'Error', message: 'Failed to delete account. Please try again.' });
+                  }
                 },
+              },
+              buttons: [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Delete Account', style: 'destructive' },
               ],
-              'secure-text'
-            );
+            });
           },
         },
-      ]
-    );
+      ],
+    });
   }
 
   return (
@@ -257,28 +246,28 @@ export default function SettingsScreen() {
                   iconColor={colorScheme === 'light' ? '#10B981' : '#34D399'}
                   label="Account Information"
                   subtitle="View and edit your email"
-                  onPress={() => Alert.alert('Coming Soon', 'This feature is under development.')}
+                  onPress={() => showAlert({ title: 'Coming Soon', message: 'This feature is under development.' })}
                 />
                 <SettingsItem
                   icon={Key}
                   iconColor={colorScheme === 'light' ? '#F59E0B' : '#FBBF24'}
                   label="Change Password"
                   subtitle="Update your password"
-                  onPress={() => Alert.alert('Coming Soon', 'This feature is under development.')}
+                  onPress={() => showAlert({ title: 'Coming Soon', message: 'This feature is under development.' })}
                 />
                 <SettingsItem
                   icon={ShieldCheck}
                   iconColor={colorScheme === 'light' ? '#8B5CF6' : '#A78BFA'}
                   label="Verification"
                   subtitle="Get verified badge"
-                  onPress={() => Alert.alert('Coming Soon', 'This feature is under development.')}
+                  onPress={() => showAlert({ title: 'Coming Soon', message: 'This feature is under development.' })}
                 />
                 <SettingsItem
                   icon={Instagram}
                   iconColor="#E4405F"
                   label="Instagram Connection"
                   subtitle="Link your Instagram account"
-                  onPress={() => Alert.alert('Coming Soon', 'This feature is under development.')}
+                  onPress={() => showAlert({ title: 'Coming Soon', message: 'This feature is under development.' })}
                 />
               </YStack>
             </SettingsSection>
@@ -321,7 +310,7 @@ export default function SettingsScreen() {
                   iconColor={colorScheme === 'light' ? '#14B8A6' : '#2DD4BF'}
                   label="Chat Notifications"
                   subtitle="Notify me of new messages"
-                  onPress={() => Alert.alert('Coming Soon', 'This feature is under development.')}
+                  onPress={() => showAlert({ title: 'Coming Soon', message: 'This feature is under development.' })}
                 />
               </YStack>
             </SettingsSection>
@@ -349,7 +338,7 @@ export default function SettingsScreen() {
                   iconColor={colorScheme === 'light' ? '#F97316' : '#FB923C'}
                   label="Language"
                   subtitle="English"
-                  onPress={() => Alert.alert('Coming Soon', 'This feature is under development.')}
+                  onPress={() => showAlert({ title: 'Coming Soon', message: 'This feature is under development.' })}
                 />
               </YStack>
             </SettingsSection>
@@ -362,14 +351,14 @@ export default function SettingsScreen() {
                   iconColor={colorScheme === 'light' ? '#0EA5E9' : '#38BDF8'}
                   label="My Listings"
                   subtitle="View all your active listings"
-                  onPress={() => Alert.alert('Coming Soon', 'This feature is under development.')}
+                  onPress={() => showAlert({ title: 'Coming Soon', message: 'This feature is under development.' })}
                 />
                 <SettingsItem
                   icon={Heart}
                   iconColor={colorScheme === 'light' ? '#EF4444' : '#F87171'}
                   label="Wishlist"
                   subtitle="View your saved items"
-                  onPress={() => Alert.alert('Coming Soon', 'This feature is under development.')}
+                  onPress={() => showAlert({ title: 'Coming Soon', message: 'This feature is under development.' })}
                 />
               </YStack>
             </SettingsSection>
@@ -382,14 +371,14 @@ export default function SettingsScreen() {
                   iconColor={colorScheme === 'light' ? '#64748B' : '#94A3B8'}
                   label="Privacy Settings"
                   subtitle="Control who can see your profile"
-                  onPress={() => Alert.alert('Coming Soon', 'This feature is under development.')}
+                  onPress={() => showAlert({ title: 'Coming Soon', message: 'This feature is under development.' })}
                 />
                 <SettingsItem
                   icon={AlertCircle}
                   iconColor={colorScheme === 'light' ? '#DC2626' : '#EF4444'}
                   label="Blocked Users"
                   subtitle="Manage blocked accounts"
-                  onPress={() => Alert.alert('Coming Soon', 'This feature is under development.')}
+                  onPress={() => showAlert({ title: 'Coming Soon', message: 'This feature is under development.' })}
                 />
               </YStack>
             </SettingsSection>
@@ -402,21 +391,21 @@ export default function SettingsScreen() {
                   iconColor={colorScheme === 'light' ? '#059669' : '#10B981'}
                   label="Help Center"
                   subtitle="Get help and support"
-                  onPress={() => Alert.alert('Coming Soon', 'This feature is under development.')}
+                  onPress={() => showAlert({ title: 'Coming Soon', message: 'This feature is under development.' })}
                 />
                 <SettingsItem
                   icon={AlertCircle}
                   iconColor={colorScheme === 'light' ? '#DC2626' : '#EF4444'}
                   label="Report a Problem"
                   subtitle="Let us know about issues"
-                  onPress={() => Alert.alert('Coming Soon', 'This feature is under development.')}
+                  onPress={() => showAlert({ title: 'Coming Soon', message: 'This feature is under development.' })}
                 />
                 <SettingsItem
                   icon={Info}
                   iconColor={colorScheme === 'light' ? '#6B7280' : '#9CA3AF'}
                   label="About Zenbund"
                   subtitle="Version 1.0.0"
-                  onPress={() => Alert.alert('Coming Soon', 'This feature is under development.')}
+                  onPress={() => showAlert({ title: 'Coming Soon', message: 'This feature is under development.' })}
                 />
               </YStack>
             </SettingsSection>

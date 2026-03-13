@@ -3,10 +3,10 @@ import { Text, YStack, XStack, ScrollView, Input, Sheet } from 'tamagui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Settings, Heart, MessageCircle, Plus, Edit2, Trash2, Check, X as XIcon, MoreVertical } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Alert } from 'react-native';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAlert } from '@/contexts/AlertContext';
 import { apiClient } from '@/lib/api';
 import { ThreadMember, Comment } from '@/types';
 
@@ -36,6 +36,7 @@ export default function ThreadsScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
   const { user } = useAuth();
+  const { showAlert } = useAlert();
 
   const [joinedThreads, setJoinedThreads] = useState<Array<{ id: number; name: string; emoji: string }>>([]);
   const [loading, setLoading] = useState(true);
@@ -211,7 +212,7 @@ export default function ThreadsScreen() {
       }
     } catch (error) {
       console.error('Failed to update comment:', error);
-      Alert.alert('Error', 'Failed to update comment. Please try again.');
+      showAlert({ title: 'Error', message: 'Failed to update comment. Please try again.' });
     }
   };
 
@@ -221,10 +222,10 @@ export default function ThreadsScreen() {
   };
 
   const handleDeleteComment = (commentId: number) => {
-    Alert.alert(
-      'Delete Comment',
-      'Are you sure you want to delete this comment? This action cannot be undone.',
-      [
+    showAlert({
+      title: 'Delete Comment',
+      message: 'Are you sure you want to delete this comment? This action cannot be undone.',
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
@@ -234,18 +235,16 @@ export default function ThreadsScreen() {
               const response = await apiClient.delete(`/comments/${commentId}`);
 
               if (response.success) {
-                // Re-fetch comments to get updated state from server
-                // This handles cascade deletion and replyCount updates automatically
                 await fetchComments();
               }
             } catch (error) {
               console.error('Failed to delete comment:', error);
-              Alert.alert('Error', 'Failed to delete comment. Please try again.');
+              showAlert({ title: 'Error', message: 'Failed to delete comment. Please try again.' });
             }
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   const showCommentActions = (comment: Comment) => {

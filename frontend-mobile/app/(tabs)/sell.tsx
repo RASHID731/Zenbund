@@ -3,7 +3,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { X, Camera, Euro, Tag, MapPin, MessageSquare, Image as ImageIcon, ChevronDown } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { Alert, Image, TouchableOpacity } from 'react-native';
+import { Image, TouchableOpacity } from 'react-native';
+import { useAlert } from '@/contexts/AlertContext';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { Colors } from '@/constants/theme';
@@ -23,6 +24,7 @@ export default function SellTab() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme || 'light'];
   const { user } = useAuth();
+  const { showAlert } = useAlert();
 
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
@@ -80,13 +82,13 @@ export default function SellTab() {
   // Pick images from gallery
   async function pickImages() {
     if (images.length >= 10) {
-      Alert.alert('Maximum Photos', 'You can only add up to 10 photos');
+      showAlert({ title: 'Maximum Photos', message: 'You can only add up to 10 photos' });
       return;
     }
 
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'We need camera roll permissions to select photos');
+      showAlert({ title: 'Permission Denied', message: 'We need camera roll permissions to select photos' });
       return;
     }
 
@@ -112,13 +114,13 @@ export default function SellTab() {
   // Take photo with camera
   async function takePhoto() {
     if (images.length >= 10) {
-      Alert.alert('Maximum Photos', 'You can only add up to 10 photos');
+      showAlert({ title: 'Maximum Photos', message: 'You can only add up to 10 photos' });
       return;
     }
 
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'We need camera permissions to take photos');
+      showAlert({ title: 'Permission Denied', message: 'We need camera permissions to take photos' });
       return;
     }
 
@@ -176,7 +178,7 @@ export default function SellTab() {
   async function handlePublish() {
     // Check if user is authenticated
     if (!user) {
-      Alert.alert('Error', 'You must be logged in to create a listing');
+      showAlert({ title: 'Error', message: 'You must be logged in to create a listing' });
       return;
     }
 
@@ -222,7 +224,7 @@ export default function SellTab() {
       const response = await apiClient.postFormData('/offers', formData);
 
       if (response.success) {
-        Alert.alert('Success', 'Your listing has been published!', [
+        showAlert({ title: 'Success', message: 'Your listing has been published!', buttons: [
           {
             text: 'OK',
             onPress: () => {
@@ -237,13 +239,13 @@ export default function SellTab() {
               router.push('/(tabs)');
             },
           },
-        ]);
+        ] });
       } else {
-        Alert.alert('Error', response.message || 'Failed to create listing. Please try again.');
+        showAlert({ title: 'Error', message: response.message || 'Failed to create listing. Please try again.' });
       }
     } catch (error) {
       console.error('Error publishing listing:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      showAlert({ title: 'Error', message: 'An unexpected error occurred. Please try again.' });
     } finally {
       setIsUploading(false);
     }
