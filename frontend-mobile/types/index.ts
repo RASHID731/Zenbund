@@ -112,9 +112,27 @@ export interface Message {
   senderId: number;
   text: string;
   createdAt: string;
+  editedAt?: string;
+  isEdited?: boolean;
   // Populated relationships (not available in backend response)
   sender?: User;
   chat?: Chat;
+}
+
+export type WsMessageEventType = 'NEW_MESSAGE' | 'EDIT_MESSAGE' | 'DELETE_MESSAGE';
+
+export interface WsMessageEvent {
+  type: WsMessageEventType;
+  message?: Message;
+  messageId?: number;
+  chatId: number;
+}
+
+export interface WsTypingEvent {
+  senderId: number;
+  senderName: string;
+  isTyping: boolean;
+  chatId: number;
 }
 
 export interface Wishlist {

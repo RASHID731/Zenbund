@@ -3,12 +3,15 @@ package com.zenbund.backend.service;
 import com.zenbund.backend.dto.request.SendMessageRequest;
 import com.zenbund.backend.dto.request.UpdateMessageRequest;
 import com.zenbund.backend.dto.response.MessageResponse;
+import com.zenbund.backend.dto.ws.WsMessageEvent;
 import com.zenbund.backend.entity.Chat;
 import com.zenbund.backend.entity.Message;
 import com.zenbund.backend.exception.ResourceNotFoundException;
 import com.zenbund.backend.exception.UnauthorizedException;
 import com.zenbund.backend.repository.ChatRepository;
 import com.zenbund.backend.repository.MessageRepository;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,11 +26,14 @@ public class MessageServiceImpl implements MessageService {
 
     private final MessageRepository messageRepository;
     private final ChatRepository chatRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     public MessageServiceImpl(MessageRepository messageRepository,
-                              ChatRepository chatRepository) {
+                              ChatRepository chatRepository,
+                              @Lazy SimpMessagingTemplate messagingTemplate) {
         this.messageRepository = messageRepository;
         this.chatRepository = chatRepository;
+        this.messagingTemplate = messagingTemplate;
     }
 
     @Override
@@ -79,7 +85,11 @@ public class MessageServiceImpl implements MessageService {
             throw new UnauthorizedException("You can only delete your own messages");
         }
 
+        Long chatId = message.getChatId();
         messageRepository.delete(message);
+
+        WsMessageEvent event = new WsMessageEvent("DELETE_MESSAGE", null, messageId, chatId);
+        messagingTemplate.convertAndSend("/topic/chat/" + chatId, event);
     }
 
     @Override
@@ -97,6 +107,11 @@ public class MessageServiceImpl implements MessageService {
         message.setEditedAt(Instant.now());
 
         Message savedMessage = messageRepository.save(message);
-        return MessageResponse.fromEntity(savedMessage);
+        MessageResponse response = MessageResponse.fromEntity(savedMessage);
+
+        WsMessageEvent event = new WsMessageEvent("EDIT_MESSAGE", response, null, savedMessage.getChatId());
+        messagingTemplate.convertAndSend("/topic/chat/" + savedMessage.getChatId(), event);
+
+        return response;
     }
 }

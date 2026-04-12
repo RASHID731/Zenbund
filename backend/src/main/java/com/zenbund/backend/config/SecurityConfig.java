@@ -68,7 +68,8 @@ public class SecurityConfig {
                                 "/api/categories/**",      // Categories (for now)
                                 "/api/offers/**",          // Offers (for now)
                                 "/api/threads/**",         // Threads (for now)
-                                "/api/thread-members/**"   // Thread memberships (for now)
+                                "/api/thread-members/**",  // Thread memberships (for now)
+                                "/ws/**"                   // WebSocket upgrade (JWT auth handled by STOMP interceptor)
                         ).permitAll()
 
                         // ALL OTHER endpoints require authentication

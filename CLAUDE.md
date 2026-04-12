@@ -77,6 +77,11 @@ File-based routing via `expo-router`. Entry: `app/_layout.tsx` wraps the tree in
 
 **Image handling:** `expo-image-picker` for selection, `expo-image-manipulator` for compression (max 1200px width, JPEG 0.8 quality), then multipart POST via `apiClient.postFormData`.
 
+## Mandatory Workflow Rules
+
+- **Always use Context7 before writing or modifying any code** that involves a library, framework, or API — including Spring Boot, React Native, Expo, Tamagui, stomp.js, and any npm/Maven package. Resolve the library ID first, then query the relevant docs, then write the code. No exceptions.
+- This applies to: new files, modifications to existing files, bug fixes, and planned implementations. Training data is not sufficient — always verify against current docs.
+
 ## Key Conventions
 
 - Backend DTOs are separate from entities — always use DTOs in controllers, never return entities directly.

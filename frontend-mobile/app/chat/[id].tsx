@@ -8,6 +8,8 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api';
+import { useChatSocket } from '@/hooks/useChatSocket';
+import { Message, WsTypingEvent } from '@/types';
 
 interface ChatMessage {
   id: number;
@@ -34,11 +36,60 @@ export default function ChatConversationScreen() {
   const [otherUser, setOtherUser] = useState<{ id: number; name: string; profilePicture?: string; isOnline: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Typing indicator state
+  const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+  const typingClearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Edit/Delete state
   const [selectedMessageId, setSelectedMessageId] = useState<number | null>(null);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
+
+  // WebSocket callbacks
+  const onNewMessage = useCallback((msg: Message) => {
+    setMessages(prev => {
+      if (prev.some(m => m.id === msg.id)) return prev;
+      const updated = [...prev, msg];
+      messagesRef.current = updated;
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      return updated;
+    });
+  }, []);
+
+  const onEditMessage = useCallback((msg: Message) => {
+    setMessages(prev => {
+      const updated = prev.map(m => m.id === msg.id ? msg : m);
+      messagesRef.current = updated;
+      return updated;
+    });
+  }, []);
+
+  const onDeleteMessage = useCallback((messageId: number) => {
+    setMessages(prev => {
+      const updated = prev.filter(m => m.id !== messageId);
+      messagesRef.current = updated;
+      return updated;
+    });
+  }, []);
+
+  const onTypingChange = useCallback((event: WsTypingEvent) => {
+    if (event.senderId === user?.userId) return;
+    setIsOtherUserTyping(event.isTyping);
+    if (event.isTyping) {
+      if (typingClearTimeoutRef.current) clearTimeout(typingClearTimeoutRef.current);
+      typingClearTimeoutRef.current = setTimeout(() => setIsOtherUserTyping(false), 3000);
+    }
+  }, [user?.userId]);
+
+  const numericId = Number(id);
+  const { sendMessage: wsSend, sendTyping, connected } = useChatSocket(
+    numericId,
+    onNewMessage,
+    onEditMessage,
+    onDeleteMessage,
+    onTypingChange
+  );
 
   // Fetch chat data on mount
   useEffect(() => {
@@ -94,36 +145,12 @@ export default function ChatConversationScreen() {
   };
 
   // Send message handler
-  const handleSendMessage = async () => {
-    if (inputText.trim().length === 0) return;
-
+  const handleSendMessage = () => {
+    if (inputText.trim().length === 0 || !connected) return;
     const messageText = inputText.trim();
-    setInputText(''); // Clear input immediately for better UX
-
-    try {
-      const response = await apiClient.post<ChatMessage>(
-        `/messages/chats/${id}/messages`,
-        { text: messageText }
-      );
-
-      if (response.success && response.data) {
-        const newMessage = response.data;
-        setMessages(prev => {
-          const updated = [...prev, newMessage];
-          messagesRef.current = updated;
-          return updated;
-        });
-
-        // Auto-scroll to bottom
-        setTimeout(() => {
-          flatListRef.current?.scrollToEnd({ animated: true });
-        }, 100);
-      }
-    } catch (error) {
-      console.error('Failed to send message:', error);
-      // Restore input text on error
-      setInputText(messageText);
-    }
+    setInputText('');
+    wsSend(messageText);
+    // Message will arrive via onNewMessage WS callback
   };
 
   // Delete message handler
@@ -428,6 +455,15 @@ export default function ChatConversationScreen() {
             }
           />
 
+          {/* Typing Indicator */}
+          {isOtherUserTyping && (
+            <XStack paddingHorizontal={24} paddingVertical={6} alignItems="center" gap={6}>
+              <Text fontSize={13} color={colors.textSecondary} fontFamily="$body" fontStyle="italic">
+                {otherUser?.name || 'Someone'} is typing...
+              </Text>
+            </XStack>
+          )}
+
           {/* Input Area */}
           <XStack
             marginHorizontal={16}
@@ -444,7 +480,7 @@ export default function ChatConversationScreen() {
             <Input
               flex={1}
               value={inputText}
-              onChangeText={setInputText}
+              onChangeText={(text) => { setInputText(text); sendTyping(true); }}
               placeholder="Type a message..."
               placeholderTextColor={colors.textTertiary}
               backgroundColor="transparent"
@@ -459,12 +495,13 @@ export default function ChatConversationScreen() {
               width={35}
               height={35}
               borderRadius={99}
-              backgroundColor={inputText.trim() ? colors.primary : colors.primaryLight}
+              backgroundColor={inputText.trim() && connected ? colors.primary : colors.primaryLight}
               justifyContent="center"
               alignItems="center"
               pressStyle={{ opacity: 0.8 }}
               cursor="pointer"
               onPress={handleSendMessage}
+              disabled={!connected}
             >
               <Send
                 size={18}
