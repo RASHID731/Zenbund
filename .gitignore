@@ -1,0 +1,39 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Claude Code
+.claude/
+memory/
+CLAUDE.md
+
+# Build outputs
+target/
+build/
+*.class
+*.jar
+
+# Node
+node_modules/
+.next/
+dist/
+
+# Expo
+.expo/
+android/
+ios/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
