@@ -2,7 +2,7 @@ spring.application.name=backend
 
 # PostgreSQL Database Configuration
 spring.datasource.url=jdbc:postgresql://localhost:5432/zenbund
-spring.datasource.username=vanilla
+spring.datasource.username=your_db_username
 spring.datasource.driver-class-name=org.postgresql.Driver
 
 # Hibernate Configuration
@@ -16,18 +16,18 @@ server.port=8080
 
 # Cloudinary Configuration
 # Get these values from: https://cloudinary.com/console
-cloudinary.cloud-name=diealq2zf
-cloudinary.api-key=311126638957975
-cloudinary.api-secret=sSqKKqIvX_r_tks9NJq7bIMfTak
+# Set as environment variables or replace with your actual values locally (never commit real values)
+cloudinary.cloud-name=${CLOUDINARY_CLOUD_NAME}
+cloudinary.api-key=${CLOUDINARY_API_KEY}
+cloudinary.api-secret=${CLOUDINARY_API_SECRET}
 
 # File Upload Configuration
 spring.servlet.multipart.max-file-size=5MB
 spring.servlet.multipart.max-request-size=50MB
 
 # JWT Configuration
-# Secret key for signing JWT tokens (must be at least 256 bits / 32 characters)
-# In production, use a strong randomly generated secret and store securely (e.g., environment variable)
-jwt.secret=zenbund-super-secret-jwt-key-for-authentication-must-be-at-least-256-bits-long
-# Token expiration: 14 days (2 weeks) in milliseconds (1000ms * 60s * 60m * 24h * 14d)
-# Old: 24 hours = 86400000, 7 days = 604800000
+# Generate a strong random secret (at least 256 bits / 32 characters)
+# Example: openssl rand -base64 64
+jwt.secret=${JWT_SECRET}
+# Token expiration: 14 days in milliseconds
 jwt.expiration=1209600000

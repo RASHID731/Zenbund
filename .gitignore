@@ -34,6 +34,9 @@ ios/
 .env.local
 .env.*.local
 
+# Spring Boot secrets — use application.properties.example as template
+backend/src/main/resources/application.properties
+
 # Logs
 *.log
 npm-debug.log*
